@@ -297,6 +297,56 @@ export type Database = {
           },
         ];
       };
+      jobs: {
+        Row: {
+          attempts: number;
+          created_at: string;
+          id: string;
+          last_error: string | null;
+          max_attempts: number;
+          organization_id: string;
+          payload: Json;
+          run_after: string;
+          status: string;
+          type: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempts?: number;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          max_attempts?: number;
+          organization_id: string;
+          payload?: Json;
+          run_after?: string;
+          status?: string;
+          type: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempts?: number;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          max_attempts?: number;
+          organization_id?: string;
+          payload?: Json;
+          run_after?: string;
+          status?: string;
+          type?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "jobs_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       knowledge_chunks: {
         Row: {
           chunk_index: number;
@@ -671,6 +721,10 @@ export type Database = {
     Views: { [_ in never]: never };
     Functions: {
       user_org_ids: { Args: never; Returns: string[] };
+      claim_jobs: {
+        Args: { p_limit?: number };
+        Returns: Database["public"]["Tables"]["jobs"]["Row"][];
+      };
       increment_usage: {
         Args: { p_org: string; p_key: string };
         Returns: number;

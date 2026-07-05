@@ -44,14 +44,14 @@ export async function createPendingDocument(
 
 /**
  * Background phase: extract → chunk → embed → store.
- * Run inside `after()` so it never blocks the request.
+ * Returns true on success (used for job retry decisions).
  */
 export async function processDocument(
   supabase: Client,
   orgId: string,
   documentId: string,
   source: DocumentSource
-): Promise<void> {
+): Promise<boolean> {
   await supabase
     .from("knowledge_documents")
     .update({ status: "indexing" })
@@ -94,11 +94,13 @@ export async function processDocument(
       .from("knowledge_documents")
       .update({ status: "ready" })
       .eq("id", documentId);
+    return true;
   } catch (e) {
     console.error(`[knowledge] indexing failed for ${documentId}:`, e);
     await supabase
       .from("knowledge_documents")
       .update({ status: "error" })
       .eq("id", documentId);
+    return false;
   }
 }

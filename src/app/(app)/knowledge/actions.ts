@@ -5,10 +5,8 @@ import { after } from "next/server";
 
 import { embedQuery, embeddingsAvailable, NO_EMBEDDINGS_ERROR } from "@/lib/ai/embeddings";
 import { checkKnowledgeBudget } from "@/lib/billing/usage";
-import {
-  createPendingDocument,
-  processDocument,
-} from "@/lib/knowledge/index-document";
+import { createPendingDocument } from "@/lib/knowledge/index-document";
+import { enqueueIndexJob, kickJobProcessor, processInline } from "@/lib/jobs";
 import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,14 +54,15 @@ export async function uploadKnowledgeFile(
   });
   if (error || !documentId) return { error: error ?? "Could not create document" };
 
-  // Extraction + embedding runs after the response is sent.
-  after(() =>
-    processDocument(supabase, orgId, documentId, {
-      kind: "buffer",
-      fileName: file.name,
-      buffer,
-    })
-  );
+  // Durable job survives serverless timeouts and retries on failure;
+  // falls back to best-effort inline processing when no service role is configured.
+  const source = { kind: "storage" as const, path: storagePath, fileName: file.name };
+  const jobId = await enqueueIndexJob(orgId, { documentId, source });
+  if (jobId) {
+    kickJobProcessor();
+  } else {
+    after(() => processInline(supabase, orgId, { documentId, source }));
+  }
 
   revalidatePath("/knowledge");
   return { success: `Indexing “${file.name}” — it'll be ready shortly.` };
@@ -96,7 +95,13 @@ export async function addKnowledgeUrl(
   });
   if (error || !documentId) return { error: error ?? "Could not create document" };
 
-  after(() => processDocument(supabase, orgId, documentId, { kind: "url", url }));
+  const source = { kind: "url" as const, url };
+  const jobId = await enqueueIndexJob(orgId, { documentId, source });
+  if (jobId) {
+    kickJobProcessor();
+  } else {
+    after(() => processInline(supabase, orgId, { documentId, source }));
+  }
 
   revalidatePath("/knowledge");
   return { success: `Indexing ${url} — it'll be ready shortly.` };
@@ -127,7 +132,13 @@ export async function addKnowledgeText(
   });
   if (error || !documentId) return { error: error ?? "Could not create document" };
 
-  after(() => processDocument(supabase, orgId, documentId, { kind: "text", text }));
+  const source = { kind: "text" as const, text };
+  const jobId = await enqueueIndexJob(orgId, { documentId, source });
+  if (jobId) {
+    kickJobProcessor();
+  } else {
+    after(() => processInline(supabase, orgId, { documentId, source }));
+  }
 
   revalidatePath("/knowledge");
   return { success: `Indexing “${title}” — it'll be ready shortly.` };

@@ -11,6 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  EditDetailsButton,
+  NotesEditor,
+  TagsEditor,
+} from "./customer-editor";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { initials, timeAgo } from "@/lib/format";
@@ -58,7 +63,17 @@ export default async function CustomerPage({
           <AvatarFallback className="text-lg">{initials(who)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <h1 className="font-serif text-3xl">{who}</h1>
+          <div className="flex items-center gap-1">
+            <h1 className="font-serif text-3xl">{who}</h1>
+            <EditDetailsButton
+              customer={{
+                id: customer.id,
+                name: customer.name,
+                company: customer.company,
+                phone: customer.phone,
+              }}
+            />
+          </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {customer.email && (
               <span className="flex items-center gap-1.5">
@@ -76,15 +91,7 @@ export default async function CustomerPage({
               </span>
             )}
           </div>
-          {customer.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {customer.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-[10px]">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
+          <TagsEditor customerId={customer.id} tags={customer.tags} />
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">Lifetime value</p>
@@ -158,18 +165,7 @@ export default async function CustomerPage({
         </CardContent>
       </Card>
 
-      {customer.notes && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-              {customer.notes}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <NotesEditor customerId={customer.id} notes={customer.notes} />
     </div>
   );
 }
