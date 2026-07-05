@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getCurrentMember } from "@/lib/org";
+import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { AGENT_PRESETS } from "./presets";
 
@@ -18,8 +18,9 @@ export async function saveAgent(input: {
   temperature: number;
   enabled: boolean;
 }): Promise<AgentFormState> {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("admin");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
 
   const name = input.name.trim();
   if (!name) return { error: "Give the agent a name." };
@@ -60,20 +61,27 @@ export async function saveAgent(input: {
 }
 
 export async function toggleAgent(id: string, enabled: boolean) {
+  const gate = await requireMember("admin");
+  if (!gate.ok) return;
+
   const supabase = await createClient();
   await supabase.from("agent_configs").update({ enabled }).eq("id", id);
   revalidatePath("/agents");
 }
 
 export async function deleteAgent(id: string) {
+  const gate = await requireMember("admin");
+  if (!gate.ok) return;
+
   const supabase = await createClient();
   await supabase.from("agent_configs").delete().eq("id", id);
   revalidatePath("/agents");
 }
 
 export async function createFromPreset(presetId: string) {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("admin");
+  if (!gate.ok) return;
+  const { current } = gate;
 
   const preset = AGENT_PRESETS.find((p) => p.id === presetId);
   if (!preset) return;

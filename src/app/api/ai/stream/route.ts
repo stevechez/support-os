@@ -13,6 +13,7 @@ import {
 import { embeddingsAvailable } from "@/lib/ai/embeddings";
 import { getOrgModel } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
+import { PERMISSION_ERROR, roleAtLeast } from "@/lib/org";
 
 type Kind = "summarize" | "suggest_reply" | "checklist" | "find_docs";
 
@@ -35,6 +36,9 @@ export async function POST(request: NextRequest) {
   const ctx = await loadTicketContext(ticketId);
   if (!ctx) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (!roleAtLeast(ctx.current.member.role, "agent")) {
+    return NextResponse.json({ error: PERMISSION_ERROR }, { status: 403 });
   }
 
   const orgId = ctx.current.member.organization_id;

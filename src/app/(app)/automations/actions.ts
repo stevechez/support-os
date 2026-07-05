@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { Step, Trigger } from "@/lib/automations/types";
 import type { Json } from "@/lib/database.types";
-import { getCurrentMember } from "@/lib/org";
+import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { TEMPLATES } from "./templates";
 
@@ -18,8 +18,9 @@ export async function saveAutomation(input: {
   steps: Step[];
   enabled: boolean;
 }): Promise<SaveResult> {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("admin");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
 
   const name = input.name.trim();
   if (!name) return { error: "Give the automation a name." };
@@ -55,20 +56,27 @@ export async function saveAutomation(input: {
 }
 
 export async function toggleAutomation(id: string, enabled: boolean) {
+  const gate = await requireMember("admin");
+  if (!gate.ok) return;
+
   const supabase = await createClient();
   await supabase.from("automations").update({ enabled }).eq("id", id);
   revalidatePath("/automations");
 }
 
 export async function deleteAutomation(id: string) {
+  const gate = await requireMember("admin");
+  if (!gate.ok) return;
+
   const supabase = await createClient();
   await supabase.from("automations").delete().eq("id", id);
   revalidatePath("/automations");
 }
 
 export async function createFromTemplate(templateId: string) {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("admin");
+  if (!gate.ok) return;
+  const { current } = gate;
 
   const template = TEMPLATES.find((t) => t.id === templateId);
   if (!template) return;

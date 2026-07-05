@@ -7,7 +7,7 @@ import { after } from "next/server";
 import { runAutomations } from "@/lib/automations/engine";
 import { sendTicketEmail } from "@/lib/channels/email-outbound";
 import type { TicketPriority, TicketStatus } from "@/lib/database.types";
-import { getCurrentMember } from "@/lib/org";
+import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 
 function revalidateTicketPages() {
@@ -22,8 +22,9 @@ export async function createTicket(
   _prev: TicketFormState,
   formData: FormData
 ): Promise<TicketFormState> {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("agent");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
 
   const supabase = await createClient();
   const orgId = current.member.organization_id;
@@ -100,6 +101,9 @@ export async function updateTicketStatus(
   ticketId: string,
   status: TicketStatus
 ) {
+  const gate = await requireMember("agent");
+  if (!gate.ok) return;
+
   const supabase = await createClient();
   await supabase
     .from("tickets")
@@ -118,6 +122,9 @@ export async function updateTicketPriority(
   ticketId: string,
   priority: TicketPriority
 ) {
+  const gate = await requireMember("agent");
+  if (!gate.ok) return;
+
   const supabase = await createClient();
   await supabase.from("tickets").update({ priority }).eq("id", ticketId);
   revalidateTicketPages();
@@ -127,6 +134,9 @@ export async function assignTicket(
   ticketId: string,
   memberId: string | null
 ) {
+  const gate = await requireMember("agent");
+  if (!gate.ok) return;
+
   const supabase = await createClient();
   await supabase
     .from("tickets")
@@ -136,8 +146,9 @@ export async function assignTicket(
 }
 
 export async function sendReply(formData: FormData) {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("agent");
+  if (!gate.ok) return;
+  const { current } = gate;
 
   const supabase = await createClient();
   const ticketId = formData.get("ticketId") as string;

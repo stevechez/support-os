@@ -7,7 +7,7 @@ import { z } from "zod";
 import { loadTicketContext } from "@/lib/ai/context";
 import { getOrgModel } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
-import { getCurrentMember } from "@/lib/org";
+import { PERMISSION_ERROR, requireMember, roleAtLeast } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 
 export type AiResult =
@@ -35,8 +35,9 @@ async function gateAi(
 }
 
 export async function setAiModel(modelId: string) {
-  const current = await getCurrentMember();
-  if (!current) return;
+  const gate = await requireMember("admin");
+  if (!gate.ok) return;
+  const { current } = gate;
 
   const supabase = await createClient();
   await supabase.from("settings").upsert({
@@ -64,6 +65,9 @@ const analysisSchema = z.object({
 export async function analyzeTicket(ticketId: string): Promise<AiResult> {
   const ctx = await loadTicketContext(ticketId);
   if (!ctx) return { ok: false, error: "Ticket not found." };
+  if (!roleAtLeast(ctx.current.member.role, "agent")) {
+    return { ok: false, error: PERMISSION_ERROR };
+  }
   const gate = await gateAi(ctx.current.member.organization_id);
   if (!gate.ok) return { ok: false, error: gate.error };
 
@@ -102,8 +106,9 @@ export async function rewriteDraft(
   draft: string,
   tone: "friendly" | "formal" | "concise"
 ): Promise<AiResult> {
-  const current = await getCurrentMember();
-  if (!current) return { ok: false, error: "Not signed in." };
+  const gate0 = await requireMember("agent");
+  if (!gate0.ok) return { ok: false, error: gate0.error };
+  const { current } = gate0;
   if (!draft.trim()) return { ok: false, error: "Write a draft first." };
 
   const gate = await gateAi(current.member.organization_id);
@@ -125,8 +130,9 @@ export async function translateDraft(
   draft: string,
   language: string
 ): Promise<AiResult> {
-  const current = await getCurrentMember();
-  if (!current) return { ok: false, error: "Not signed in." };
+  const gate0 = await requireMember("agent");
+  if (!gate0.ok) return { ok: false, error: gate0.error };
+  const { current } = gate0;
   if (!draft.trim()) return { ok: false, error: "Write a draft first." };
 
   const gate = await gateAi(current.member.organization_id);
@@ -145,8 +151,9 @@ export async function translateDraft(
 }
 
 export async function escalateTicket(ticketId: string): Promise<AiResult> {
-  const current = await getCurrentMember();
-  if (!current) return { ok: false, error: "Not signed in." };
+  const gate = await requireMember("agent");
+  if (!gate.ok) return { ok: false, error: gate.error };
+  const { current } = gate;
 
   const supabase = await createClient();
   await supabase

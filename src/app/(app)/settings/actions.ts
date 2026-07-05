@@ -2,15 +2,15 @@
 
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import type { Json } from "@/lib/database.types";
-import { getCurrentMember } from "@/lib/org";
+import { PERMISSION_ERROR, requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 
 async function upsertSetting(key: string, value: Json) {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("admin");
+  if (!gate.ok) throw new Error(PERMISSION_ERROR);
+  const { current } = gate;
 
   const supabase = await createClient();
   await supabase.from("settings").upsert({
@@ -72,8 +72,9 @@ export async function updateWorkspaceName(
   _prev: { error?: string; success?: string },
   formData: FormData
 ): Promise<{ error?: string; success?: string }> {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("admin");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
 
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Workspace name can't be empty." };

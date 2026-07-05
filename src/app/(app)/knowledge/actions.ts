@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { after } from "next/server";
 
 import { embedQuery, embeddingsAvailable, NO_EMBEDDINGS_ERROR } from "@/lib/ai/embeddings";
@@ -10,7 +9,7 @@ import {
   createPendingDocument,
   processDocument,
 } from "@/lib/knowledge/index-document";
-import { getCurrentMember } from "@/lib/org";
+import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 
 export type KnowledgeFormState = { error?: string; success?: string };
@@ -19,8 +18,9 @@ export async function uploadKnowledgeFile(
   _prev: KnowledgeFormState,
   formData: FormData
 ): Promise<KnowledgeFormState> {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("agent");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
   if (!embeddingsAvailable()) return { error: NO_EMBEDDINGS_ERROR };
 
   const file = formData.get("file") as File | null;
@@ -73,8 +73,9 @@ export async function addKnowledgeUrl(
   _prev: KnowledgeFormState,
   formData: FormData
 ): Promise<KnowledgeFormState> {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("agent");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
   if (!embeddingsAvailable()) return { error: NO_EMBEDDINGS_ERROR };
 
   const url = (formData.get("url") as string)?.trim();
@@ -105,8 +106,9 @@ export async function addKnowledgeText(
   _prev: KnowledgeFormState,
   formData: FormData
 ): Promise<KnowledgeFormState> {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("agent");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
   if (!embeddingsAvailable()) return { error: NO_EMBEDDINGS_ERROR };
 
   const title = (formData.get("title") as string)?.trim();
@@ -132,8 +134,8 @@ export async function addKnowledgeText(
 }
 
 export async function deleteKnowledgeDocument(documentId: string) {
-  const current = await getCurrentMember();
-  if (!current) redirect("/login");
+  const gate = await requireMember("agent");
+  if (!gate.ok) return;
 
   const supabase = await createClient();
 
@@ -163,8 +165,8 @@ export type SearchHit = {
 export async function searchKnowledge(
   query: string
 ): Promise<{ hits?: SearchHit[]; error?: string }> {
-  const current = await getCurrentMember();
-  if (!current) return { error: "Not signed in." };
+  const gate = await requireMember("viewer");
+  if (!gate.ok) return { error: gate.error };
   if (!query.trim()) return { hits: [] };
 
   try {
