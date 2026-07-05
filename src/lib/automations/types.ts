@@ -17,8 +17,8 @@ export type Trigger = {
 
 export type Step =
   | { type: "ai_classify" }
-  | { type: "ai_draft_reply" }
-  | { type: "ai_auto_reply"; resolve?: boolean }
+  | { type: "ai_draft_reply"; agentId?: string }
+  | { type: "ai_auto_reply"; resolve?: boolean; agentId?: string }
   | { type: "set_priority"; priority: TicketPriority }
   | { type: "set_status"; status: TicketStatus }
   | { type: "add_tag"; tag: string }

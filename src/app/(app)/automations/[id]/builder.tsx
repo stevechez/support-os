@@ -43,10 +43,12 @@ export function Builder({
   initial,
   automationId,
   members,
+  agents,
 }: {
   initial: Draft;
   automationId?: string;
   members: { id: string; display_name: string | null }[];
+  agents: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(initial);
@@ -403,6 +405,26 @@ export function Builder({
                 />
               )}
 
+              {(step.type === "ai_draft_reply" ||
+                step.type === "ai_auto_reply") && (
+                <NativeSelect
+                  value={step.agentId ?? ""}
+                  onChange={(e) =>
+                    updateStep(i, {
+                      ...step,
+                      agentId: e.target.value || undefined,
+                    })
+                  }
+                >
+                  <option value="">Default persona</option>
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              )}
+
               {step.type === "ai_auto_reply" && (
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input
@@ -410,7 +432,7 @@ export function Builder({
                     checked={step.resolve ?? false}
                     onChange={(e) =>
                       updateStep(i, {
-                        type: "ai_auto_reply",
+                        ...step,
                         resolve: e.target.checked,
                       })
                     }

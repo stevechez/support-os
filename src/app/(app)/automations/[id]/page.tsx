@@ -19,14 +19,20 @@ export default async function AutomationPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: members } = await supabase
-    .from("members")
-    .select("id, display_name");
+  const [{ data: members }, { data: agents }] = await Promise.all([
+    supabase.from("members").select("id, display_name"),
+    supabase
+      .from("agent_configs")
+      .select("id, name")
+      .eq("enabled", true)
+      .order("name"),
+  ]);
 
   if (id === "new") {
     return (
       <Builder
         members={members ?? []}
+        agents={agents ?? []}
         initial={{
           name: "",
           enabled: true,
@@ -48,6 +54,7 @@ export default async function AutomationPage({
   return (
     <Builder
       members={members ?? []}
+      agents={agents ?? []}
       automationId={automation.id}
       initial={{
         name: automation.name,

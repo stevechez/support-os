@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 
+import { resolveModel } from "@/lib/ai/models";
 import { getOrgModel } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
 import type { Database } from "@/lib/database.types";
@@ -48,12 +49,39 @@ function transcript(ticket: TicketRow): string {
   return `Subject: ${ticket.subject}\nStatus: ${ticket.status} · Priority: ${ticket.priority}\n\n${messages}`;
 }
 
+const DEFAULT_REPLY_SYSTEM =
+  "You draft replies for customer support. Write the next reply to the customer: warm, professional, concise, specific. Never invent order numbers, policies, or commitments not present in the conversation. Output only the reply body.";
+
+const REPLY_GUARDRAILS =
+  "\n\nYou are replying on behalf of the support team. Never invent order numbers, policies, prices, or commitments not present in the conversation. Output only the reply body — no signature, no preamble.";
+
 async function generateReply(
   supabase: Client,
   orgId: string,
-  ticket: TicketRow
+  ticket: TicketRow,
+  agentId?: string
 ): Promise<string> {
-  const resolved = await getOrgModel(orgId);
+  // Load the agent persona, if one is attached to this step.
+  let agent: {
+    system_prompt: string;
+    model: string;
+    temperature: number;
+    enabled: boolean;
+  } | null = null;
+
+  if (agentId) {
+    const { data } = await supabase
+      .from("agent_configs")
+      .select("system_prompt, model, temperature, enabled")
+      .eq("id", agentId)
+      .eq("organization_id", orgId)
+      .maybeSingle();
+    if (data?.enabled) agent = data;
+  }
+
+  const resolved = agent?.model
+    ? resolveModel(agent.model)
+    : await getOrgModel(orgId);
   if (!resolved) throw new Error("No AI provider configured");
 
   const budget = await checkAiBudget(supabase, orgId);
@@ -61,8 +89,10 @@ async function generateReply(
 
   const { text } = await generateText({
     model: resolved.model,
-    system:
-      "You draft replies for customer support. Write the next reply to the customer: warm, professional, concise, specific. Never invent order numbers, policies, or commitments not present in the conversation. Output only the reply body.",
+    system: agent
+      ? agent.system_prompt + REPLY_GUARDRAILS
+      : DEFAULT_REPLY_SYSTEM,
+    temperature: agent ? Number(agent.temperature) : undefined,
     prompt: transcript(ticket),
   });
   return text;
@@ -110,7 +140,7 @@ async function executeStep(
     }
 
     case "ai_draft_reply": {
-      const draft = await generateReply(supabase, orgId, ticket);
+      const draft = await generateReply(supabase, orgId, ticket, step.agentId);
       await supabase.from("messages").insert({
         organization_id: orgId,
         ticket_id: ticket.id,
@@ -122,7 +152,7 @@ async function executeStep(
     }
 
     case "ai_auto_reply": {
-      const reply = await generateReply(supabase, orgId, ticket);
+      const reply = await generateReply(supabase, orgId, ticket, step.agentId);
       await supabase.from("messages").insert({
         organization_id: orgId,
         ticket_id: ticket.id,
