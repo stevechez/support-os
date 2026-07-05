@@ -48,7 +48,7 @@ export function MembersList({
         Members ({members.length})
       </h2>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-x-auto rounded-xl border">
         {members.map((member) => {
           const name = member.display_name ?? "Member";
           const isSelf = member.id === currentMemberId;

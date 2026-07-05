@@ -657,6 +657,11 @@ export type Database = {
         Args: { p_org: string; p_key: string };
         Returns: number;
       };
+      rate_limit_hit: {
+        Args: { p_bucket: string; p_window_seconds: number };
+        Returns: number;
+      };
+      rate_limit_gc: { Args: never; Returns: undefined };
       redeem_invitation: { Args: never; Returns: string | null };
       match_knowledge_chunks: {
         Args: {

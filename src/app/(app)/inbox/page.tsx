@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Inbox as InboxIcon } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 import { availableModels } from "@/lib/ai/models";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationList } from "./conversation-list";
 import { CopilotPanel } from "./copilot-panel";
 import { InboxProvider } from "./inbox-context";
+import { InboxRealtime } from "./inbox-realtime";
 import { Thread } from "./thread";
 
 export const metadata: Metadata = { title: "Inbox" };
@@ -34,7 +37,8 @@ export default async function InboxPage({
     .limit(1, { foreignTable: "messages" });
 
   const list = tickets ?? [];
-  const selected = selectedId
+  const explicitSelection = !!selectedId && list.some((t) => t.id === selectedId);
+  const selected = explicitSelection
     ? list.find((t) => t.id === selectedId)
     : list[0];
 
@@ -61,20 +65,33 @@ export default async function InboxPage({
 
   return (
     <div className="flex h-full">
-      <ConversationList tickets={list} selectedId={selected?.id} />
+      <InboxRealtime orgId={current.member.organization_id} />
+      <ConversationList
+        tickets={list}
+        selectedId={selected?.id}
+        mobileHidden={explicitSelection}
+      />
 
       {selected ? (
         <InboxProvider>
-          <Thread
-            ticket={selected}
-            messages={messages ?? []}
-            members={members ?? []}
-          />
-          <CopilotPanel
-            ticketId={selected.id}
-            models={models}
-            currentModelId={currentModelId}
-          />
+          <div
+            className={cn(
+              "min-w-0 flex-1",
+              explicitSelection ? "flex" : "hidden lg:flex"
+            )}
+          >
+            <Thread
+              ticket={selected}
+              messages={messages ?? []}
+              members={members ?? []}
+              memberName={current.member.display_name ?? "You"}
+            />
+            <CopilotPanel
+              ticketId={selected.id}
+              models={models}
+              currentModelId={currentModelId}
+            />
+          </div>
         </InboxProvider>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">

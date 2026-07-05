@@ -5,6 +5,7 @@ import {
   createInboundTicket,
   orgForToken,
 } from "@/lib/channels/inbound";
+import { clientIp, rateLimit } from "@/lib/channels/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const NO_ADMIN =
@@ -46,6 +47,17 @@ export async function POST(request: NextRequest) {
   } catch {
     return cors(
       NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+    );
+  }
+
+  const allowed = await rateLimit(
+    supabase,
+    `chat:post:${clientIp(request)}`,
+    { limit: 20, windowSeconds: 60 }
+  );
+  if (!allowed) {
+    return cors(
+      NextResponse.json({ error: "Too many requests" }, { status: 429 })
     );
   }
 
@@ -121,6 +133,17 @@ export async function GET(request: NextRequest) {
 
   const token = request.nextUrl.searchParams.get("token") ?? "";
   const ticketId = request.nextUrl.searchParams.get("ticketId") ?? "";
+
+  const allowed = await rateLimit(
+    supabase,
+    `chat:get:${clientIp(request)}`,
+    { limit: 60, windowSeconds: 60 }
+  );
+  if (!allowed) {
+    return cors(
+      NextResponse.json({ error: "Too many requests" }, { status: 429 })
+    );
+  }
 
   const orgId = await orgForToken(supabase, "chat_widget", token);
   if (!orgId) {

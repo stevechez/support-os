@@ -20,7 +20,7 @@ export function PendingInvites({
       <h2 className="text-sm font-semibold text-muted-foreground">
         Pending invitations ({invitations.length})
       </h2>
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-x-auto rounded-xl border">
         {invitations.map((invitation) => (
           <div
             key={invitation.id}

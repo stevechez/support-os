@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { runAutomations } from "@/lib/automations/engine";
 import type { TicketPriority, TicketStatus } from "@/lib/database.types";
@@ -81,11 +82,14 @@ export async function createTicket(
     });
   }
 
-  // Fire automations for the new ticket (and its first customer message).
-  await runAutomations(supabase, orgId, "ticket.created", ticket.id);
-  if (body) {
-    await runAutomations(supabase, orgId, "message.created", ticket.id);
-  }
+  // Automations run in the background after the response is sent;
+  // the realtime inbox picks up their results as they land.
+  after(async () => {
+    await runAutomations(supabase, orgId, "ticket.created", ticket.id);
+    if (body) {
+      await runAutomations(supabase, orgId, "message.created", ticket.id);
+    }
+  });
 
   revalidateTicketPages();
   redirect(`/inbox?t=${ticket.id}`);

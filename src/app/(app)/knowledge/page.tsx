@@ -6,6 +6,7 @@ import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { AddKnowledge } from "./add-knowledge";
 import { DocumentsTable } from "./documents-table";
+import { IndexingPoller } from "./indexing-poller";
 import { KnowledgeSearch } from "./knowledge-search";
 
 export const metadata: Metadata = { title: "Knowledge Base" };
@@ -26,8 +27,13 @@ export default async function KnowledgePage() {
       (d.knowledge_chunks as unknown as { count: number }[])[0]?.count ?? 0,
   }));
 
+  const indexing = docs.some(
+    (d) => d.status === "pending" || d.status === "indexing"
+  );
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-8">
+      <IndexingPoller active={indexing} />
       <div>
         <h1 className="font-serif text-3xl">Knowledge Base</h1>
         <p className="mt-1 text-sm text-muted-foreground">

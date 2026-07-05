@@ -15,12 +15,19 @@ type TicketRow = Ticket & {
 export function ConversationList({
   tickets,
   selectedId,
+  mobileHidden = false,
 }: {
   tickets: TicketRow[];
   selectedId?: string;
+  mobileHidden?: boolean;
 }) {
   return (
-    <div className="flex w-80 shrink-0 flex-col border-r">
+    <div
+      className={cn(
+        "w-full shrink-0 flex-col border-r lg:flex lg:w-80",
+        mobileHidden ? "hidden" : "flex"
+      )}
+    >
       <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
         <span className="text-sm font-semibold">Conversations</span>
         <span className="text-xs text-muted-foreground">

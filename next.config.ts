@@ -1,5 +1,6 @@
 import path from "path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -13,4 +14,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// No-op without SENTRY_AUTH_TOKEN/DSN; uploads sourcemaps when configured.
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  disableLogger: true,
+});

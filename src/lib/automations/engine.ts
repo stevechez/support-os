@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getOrgModel } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
 import type { Database } from "@/lib/database.types";
+import { matches } from "./match";
 import type { Step, Trigger, TriggerEvent } from "./types";
 
 type Client = SupabaseClient<Database>;
@@ -26,32 +27,6 @@ async function fetchTicket(
     .eq("id", ticketId)
     .maybeSingle();
   return data as TicketRow | null;
-}
-
-function matches(ticket: TicketRow, trigger: Trigger): boolean {
-  return trigger.conditions.every((c) => {
-    const value = c.value.toLowerCase().trim();
-    switch (c.field) {
-      case "subject_contains": {
-        const lastCustomerBody =
-          [...ticket.messages]
-            .reverse()
-            .find((m) => m.sender === "customer")?.body ?? "";
-        return (
-          ticket.subject.toLowerCase().includes(value) ||
-          lastCustomerBody.toLowerCase().includes(value)
-        );
-      }
-      case "priority_is":
-        return ticket.priority === value;
-      case "sentiment_is":
-        return ticket.sentiment === value;
-      case "tag_is":
-        return ticket.tags.map((t) => t.toLowerCase()).includes(value);
-      default:
-        return false;
-    }
-  });
 }
 
 function transcript(ticket: TicketRow): string {

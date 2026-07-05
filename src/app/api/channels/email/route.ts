@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createInboundTicket, orgForToken } from "@/lib/channels/inbound";
+import { clientIp, rateLimit } from "@/lib/channels/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -23,6 +24,15 @@ export async function POST(request: NextRequest) {
       },
       { status: 503 }
     );
+  }
+
+  const allowed = await rateLimit(
+    supabase,
+    `email:${clientIp(request)}`,
+    { limit: 60, windowSeconds: 60 }
+  );
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const token = request.nextUrl.searchParams.get("token") ?? "";

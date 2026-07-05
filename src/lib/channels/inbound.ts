@@ -1,5 +1,6 @@
 import "server-only";
 
+import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { runAutomations } from "@/lib/automations/engine";
@@ -97,8 +98,10 @@ export async function createInboundTicket(
     body: input.body,
   });
 
-  await runAutomations(supabase, orgId, "ticket.created", ticket.id);
-  await runAutomations(supabase, orgId, "message.created", ticket.id);
+  after(async () => {
+    await runAutomations(supabase, orgId, "ticket.created", ticket.id);
+    await runAutomations(supabase, orgId, "message.created", ticket.id);
+  });
 
   return { ticketId: ticket.id };
 }
@@ -134,6 +137,6 @@ export async function appendInboundMessage(
       .eq("id", ticketId);
   }
 
-  await runAutomations(supabase, orgId, "message.created", ticketId);
+  after(() => runAutomations(supabase, orgId, "message.created", ticketId));
   return true;
 }

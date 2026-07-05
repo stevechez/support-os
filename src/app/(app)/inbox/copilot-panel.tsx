@@ -29,12 +29,8 @@ import { cn } from "@/lib/utils";
 import {
   analyzeTicket,
   escalateTicket,
-  findDocumentation,
-  generateChecklist,
   rewriteDraft,
   setAiModel,
-  suggestReply,
-  summarizeTicket,
   translateDraft,
   type AiResult,
 } from "./ai-actions";
@@ -43,7 +39,14 @@ import { useInbox } from "./inbox-context";
 const TONES = ["friendly", "formal", "concise"] as const;
 const LANGUAGES = ["Spanish", "French", "German", "Portuguese", "Japanese"];
 
-type PanelResult = { label: string; text: string; insertable: boolean };
+type PanelResult = {
+  label: string;
+  text: string;
+  insertable: boolean;
+  streaming?: boolean;
+};
+
+type StreamKind = "summarize" | "suggest_reply" | "checklist" | "find_docs";
 
 export function CopilotPanel({
   ticketId,
@@ -61,9 +64,72 @@ export function CopilotPanel({
   const [, startTransition] = useTransition();
 
   const hasModel = models.length > 0;
-  const activeModel =
-    models.find((m) => m.id === currentModelId) ?? models[0];
+  const activeModel = models.find((m) => m.id === currentModelId) ?? models[0];
 
+  /** Streamed actions: tokens render into the result card as they arrive. */
+  async function runStream(
+    key: string,
+    resultLabel: string,
+    kind: StreamKind,
+    opts: { insertable?: boolean } = {}
+  ) {
+    setPendingAction(key);
+    setError(null);
+    setResult({
+      label: resultLabel,
+      text: "",
+      insertable: opts.insertable ?? false,
+      streaming: true,
+    });
+
+    try {
+      const res = await fetch("/api/ai/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId, kind }),
+      });
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          (data as { error?: string }).error ?? `Request failed (${res.status})`
+        );
+      }
+
+      const sources = res.headers.get("X-Sources");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+        setResult({
+          label: resultLabel,
+          text,
+          insertable: opts.insertable ?? false,
+          streaming: true,
+        });
+      }
+
+      if (sources) {
+        text += `\n\nSources:\n${decodeURIComponent(sources)}`;
+      }
+      setResult({
+        label: resultLabel,
+        text,
+        insertable: opts.insertable ?? false,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+      setResult(null);
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  /** Non-streamed actions (structured output / mutations). */
   function run(
     key: string,
     resultLabel: string,
@@ -96,15 +162,13 @@ export function CopilotPanel({
       label: "Summarize conversation",
       icon: MessageSquareQuote,
       onClick: () =>
-        run("Summarize conversation", "Summary", () =>
-          summarizeTicket(ticketId)
-        ),
+        runStream("Summarize conversation", "Summary", "summarize"),
     },
     {
       label: "Suggest a reply",
       icon: Sparkles,
       onClick: () =>
-        run("Suggest a reply", "Suggested reply", () => suggestReply(ticketId), {
+        runStream("Suggest a reply", "Suggested reply", "suggest_reply", {
           insertable: true,
         }),
     },
@@ -112,9 +176,7 @@ export function CopilotPanel({
       label: "Find documentation",
       icon: FileSearch,
       onClick: () =>
-        run("Find documentation", "Documentation", () =>
-          findDocumentation(ticketId)
-        ),
+        runStream("Find documentation", "Documentation", "find_docs"),
     },
     {
       label: "Analyze sentiment & intent",
@@ -128,9 +190,7 @@ export function CopilotPanel({
       label: "Generate checklist",
       icon: ListChecks,
       onClick: () =>
-        run("Generate checklist", "Checklist", () =>
-          generateChecklist(ticketId)
-        ),
+        runStream("Generate checklist", "Checklist", "checklist"),
     },
     {
       label: "Escalate",
@@ -259,7 +319,6 @@ export function CopilotPanel({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
         </div>
 
         {!hasModel && (
@@ -279,7 +338,12 @@ export function CopilotPanel({
         {result && (
           <div className="mx-3 mb-3 rounded-lg border bg-card p-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold">{result.label}</span>
+              <span className="flex items-center gap-1.5 text-xs font-semibold">
+                {result.label}
+                {result.streaming && (
+                  <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                )}
+              </span>
               <button
                 type="button"
                 onClick={() => setResult(null)}
@@ -291,8 +355,11 @@ export function CopilotPanel({
             </div>
             <p className="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
               {result.text}
+              {result.streaming && (
+                <span className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-foreground/60 align-middle" />
+              )}
             </p>
-            {result.insertable && (
+            {result.insertable && !result.streaming && (
               <Button
                 size="sm"
                 className={cn("mt-3 w-full")}

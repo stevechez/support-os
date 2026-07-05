@@ -9,7 +9,13 @@ import { cn } from "@/lib/utils";
 import { sendReply } from "../tickets/actions";
 import { useInbox } from "./inbox-context";
 
-export function ReplyForm({ ticketId }: { ticketId: string }) {
+export function ReplyForm({
+  ticketId,
+  onOptimisticSend,
+}: {
+  ticketId: string;
+  onOptimisticSend?: (body: string, isInternal: boolean) => void;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const { draft, setDraft } = useInbox();
   const [internal, setInternal] = useState(false);
@@ -19,11 +25,13 @@ export function ReplyForm({ ticketId }: { ticketId: string }) {
     <form
       ref={formRef}
       action={(formData) => {
+        const body = (formData.get("body") as string)?.trim();
         startTransition(async () => {
-          await sendReply(formData);
-          formRef.current?.reset();
+          if (body) onOptimisticSend?.(body, internal);
           setDraft("");
           setInternal(false);
+          await sendReply(formData);
+          formRef.current?.reset();
         });
       }}
       className="shrink-0 border-t p-4"

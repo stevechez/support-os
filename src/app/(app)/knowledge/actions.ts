@@ -2,11 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { embedQuery, embeddingsAvailable, NO_EMBEDDINGS_ERROR } from "@/lib/ai/embeddings";
 import { checkKnowledgeBudget } from "@/lib/billing/usage";
-import { extractFromFile, extractFromUrl } from "@/lib/knowledge/extract";
-import { indexDocument } from "@/lib/knowledge/index-document";
+import {
+  createPendingDocument,
+  processDocument,
+} from "@/lib/knowledge/index-document";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,6 +27,11 @@ export async function uploadKnowledgeFile(
   if (!file || file.size === 0) return { error: "Choose a file to upload." };
   if (file.size > 8 * 1024 * 1024) return { error: "Max file size is 8 MB." };
 
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!["pdf", "docx", "md", "markdown", "txt"].includes(ext)) {
+    return { error: `Unsupported file type ".${ext}". Use pdf, docx, md, or txt.` };
+  }
+
   const supabase = await createClient();
   const orgId = current.member.organization_id;
 
@@ -31,13 +39,6 @@ export async function uploadKnowledgeFile(
   if (!budget.ok) return { error: budget.error };
 
   const buffer = await file.arrayBuffer();
-
-  let extracted;
-  try {
-    extracted = await extractFromFile(file.name, buffer);
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Extraction failed" };
-  }
 
   // Store the original file.
   const storagePath = `${orgId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
@@ -48,16 +49,24 @@ export async function uploadKnowledgeFile(
     });
   if (storageError) return { error: storageError.message };
 
-  const { error } = await indexDocument(supabase, orgId, {
-    title: extracted.title ?? file.name.replace(/\.[^.]+$/, ""),
-    text: extracted.text,
+  const { documentId, error } = await createPendingDocument(supabase, orgId, {
+    title: file.name.replace(/\.[^.]+$/, ""),
     sourceType: "upload",
     storagePath,
   });
+  if (error || !documentId) return { error: error ?? "Could not create document" };
 
-  if (error) return { error };
+  // Extraction + embedding runs after the response is sent.
+  after(() =>
+    processDocument(supabase, orgId, documentId, {
+      kind: "buffer",
+      fileName: file.name,
+      buffer,
+    })
+  );
+
   revalidatePath("/knowledge");
-  return { success: `Indexed “${file.name}”.` };
+  return { success: `Indexing “${file.name}” — it'll be ready shortly.` };
 }
 
 export async function addKnowledgeUrl(
@@ -74,34 +83,22 @@ export async function addKnowledgeUrl(
   }
 
   const supabase = await createClient();
+  const orgId = current.member.organization_id;
 
-  const budget = await checkKnowledgeBudget(
-    supabase,
-    current.member.organization_id
-  );
+  const budget = await checkKnowledgeBudget(supabase, orgId);
   if (!budget.ok) return { error: budget.error };
 
-  let extracted;
-  try {
-    extracted = await extractFromUrl(url);
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Fetch failed" };
-  }
+  const { documentId, error } = await createPendingDocument(supabase, orgId, {
+    title: url.replace(/^https?:\/\//, "").slice(0, 80),
+    sourceType: "url",
+    sourceUrl: url,
+  });
+  if (error || !documentId) return { error: error ?? "Could not create document" };
 
-  const { error } = await indexDocument(
-    supabase,
-    current.member.organization_id,
-    {
-      title: extracted.title ?? url,
-      text: extracted.text,
-      sourceType: "url",
-      sourceUrl: url,
-    }
-  );
+  after(() => processDocument(supabase, orgId, documentId, { kind: "url", url }));
 
-  if (error) return { error };
   revalidatePath("/knowledge");
-  return { success: `Indexed ${url}.` };
+  return { success: `Indexing ${url} — it'll be ready shortly.` };
 }
 
 export async function addKnowledgeText(
@@ -117,22 +114,21 @@ export async function addKnowledgeText(
   if (!title || !text) return { error: "Title and content are required." };
 
   const supabase = await createClient();
+  const orgId = current.member.organization_id;
 
-  const budget = await checkKnowledgeBudget(
-    supabase,
-    current.member.organization_id
-  );
+  const budget = await checkKnowledgeBudget(supabase, orgId);
   if (!budget.ok) return { error: budget.error };
 
-  const { error } = await indexDocument(
-    supabase,
-    current.member.organization_id,
-    { title, text, sourceType: "markdown" }
-  );
+  const { documentId, error } = await createPendingDocument(supabase, orgId, {
+    title,
+    sourceType: "markdown",
+  });
+  if (error || !documentId) return { error: error ?? "Could not create document" };
 
-  if (error) return { error };
+  after(() => processDocument(supabase, orgId, documentId, { kind: "text", text }));
+
   revalidatePath("/knowledge");
-  return { success: `Indexed “${title}”.` };
+  return { success: `Indexing “${title}” — it'll be ready shortly.` };
 }
 
 export async function deleteKnowledgeDocument(documentId: string) {

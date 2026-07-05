@@ -2,42 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  BarChart3,
-  BookOpen,
-  Bot,
-  FileText,
-  Inbox,
-  LayoutDashboard,
-  Settings,
-  Sparkles,
-  Ticket,
-  Users,
-  UsersRound,
-  Workflow,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 
+import { nav } from "@/components/nav-items";
 import { cn } from "@/lib/utils";
-
-const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/inbox", label: "Inbox", icon: Inbox },
-  { href: "/agents", label: "AI Agent", icon: Bot },
-  { href: "/knowledge", label: "Knowledge Base", icon: BookOpen },
-  { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/customers", label: "Customers", icon: Users },
-  { href: "/tickets", label: "Tickets", icon: Ticket },
-  { href: "/automations", label: "Automations", icon: Workflow },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/team", label: "Team", icon: UsersRound },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
 
 export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r bg-card/50">
+    <aside className="hidden w-60 shrink-0 flex-col border-r bg-card/50 lg:flex">
       <div className="flex h-14 items-center gap-2.5 px-5">
         <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Sparkles className="size-3.5" />

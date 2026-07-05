@@ -48,7 +48,7 @@ export function AuditLog({ entries }: { entries: Entry[] }) {
       <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
         <ScrollText className="size-4" /> Audit log
       </h2>
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-x-auto rounded-xl border">
         {entries.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">
             No activity yet.
