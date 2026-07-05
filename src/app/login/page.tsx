@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { login, signup, type AuthState } from "./actions";
+import { forgotPassword, login, signup, type AuthState } from "./actions";
 
 const initialState: AuthState = {};
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [loginState, loginAction, loginPending] = useActionState(
     login,
     initialState
@@ -27,9 +27,23 @@ export default function LoginPage() {
     signup,
     initialState
   );
+  const [forgotState, forgotAction, forgotPending] = useActionState(
+    forgotPassword,
+    initialState
+  );
 
-  const state = mode === "login" ? loginState : signupState;
-  const pending = mode === "login" ? loginPending : signupPending;
+  const state =
+    mode === "login"
+      ? loginState
+      : mode === "signup"
+        ? signupState
+        : forgotState;
+  const pending =
+    mode === "login"
+      ? loginPending
+      : mode === "signup"
+        ? signupPending
+        : forgotPending;
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
@@ -47,17 +61,29 @@ export default function LoginPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {mode === "login" ? "Welcome back" : "Create your account"}
+              {mode === "login"
+                ? "Welcome back"
+                : mode === "signup"
+                  ? "Create your account"
+                  : "Reset your password"}
             </CardTitle>
             <CardDescription>
               {mode === "login"
                 ? "Sign in to your workspace."
-                : "Start resolving tickets in minutes."}
+                : mode === "signup"
+                  ? "Start resolving tickets in minutes."
+                  : "We'll email you a reset link."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form
-              action={mode === "login" ? loginAction : signupAction}
+              action={
+                mode === "login"
+                  ? loginAction
+                  : mode === "signup"
+                    ? signupAction
+                    : forgotAction
+              }
               className="space-y-4"
             >
               <div className="space-y-2">
@@ -71,19 +97,32 @@ export default function LoginPage() {
                   autoComplete="email"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  autoComplete={
-                    mode === "login" ? "current-password" : "new-password"
-                  }
-                  minLength={8}
-                />
-              </div>
+              {mode !== "forgot" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    {mode === "login" && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                        onClick={() => setMode("forgot")}
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete={
+                      mode === "login" ? "current-password" : "new-password"
+                    }
+                    minLength={8}
+                  />
+                </div>
+              )}
 
               {state.error && (
                 <p className="text-sm text-destructive">{state.error}</p>
@@ -99,7 +138,9 @@ export default function LoginPage() {
                   ? "Please wait…"
                   : mode === "login"
                     ? "Sign in"
-                    : "Sign up"}
+                    : mode === "signup"
+                      ? "Sign up"
+                      : "Send reset link"}
               </Button>
             </form>
 
@@ -117,7 +158,9 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  Already have an account?{" "}
+                  {mode === "forgot"
+                    ? "Remembered it? "
+                    : "Already have an account? "}
                   <button
                     type="button"
                     className="text-foreground underline-offset-4 hover:underline"
