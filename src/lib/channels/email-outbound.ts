@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/database.types";
+import { withEmailRef } from "./threading";
 
 type Client = SupabaseClient<Database>;
 
@@ -110,9 +111,19 @@ export async function sendTicketEmail(
     body: string;
   }
 ): Promise<{ ok: boolean; error?: string }> {
-  const subject = input.subject.startsWith("Re:")
+  // Thread token: customer replies to this subject land on the same ticket.
+  const { data: refRow } = await supabase
+    .from("tickets")
+    .select("email_ref")
+    .eq("id", input.ticketId)
+    .maybeSingle();
+
+  let subject = input.subject.startsWith("Re:")
     ? input.subject
     : `Re: ${input.subject}`;
+  if (refRow?.email_ref) {
+    subject = withEmailRef(subject, refRow.email_ref);
+  }
 
   const { error } = await sendEmail(supabase, orgId, {
     to: input.to,

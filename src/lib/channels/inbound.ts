@@ -5,8 +5,55 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { runAutomations } from "@/lib/automations/engine";
 import type { Database } from "@/lib/database.types";
+import {
+  extractEmailRef,
+  isReplySubject,
+  normalizeSubject,
+} from "./threading";
 
 type Client = SupabaseClient<Database>;
+
+/**
+ * Try to thread an inbound email onto an existing ticket:
+ * 1. by the [#ref] token we stamp on outbound subjects,
+ * 2. else, for Re:/Fwd: subjects, by same customer + same subject.
+ */
+export async function resolveInboundTicket(
+  supabase: Client,
+  orgId: string,
+  input: { from: string; subject: string }
+): Promise<string | null> {
+  // 1. Explicit reference token — authoritative.
+  const ref = extractEmailRef(input.subject);
+  if (ref) {
+    const { data: ticket } = await supabase
+      .from("tickets")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("email_ref", ref)
+      .maybeSingle();
+    if (ticket) return ticket.id;
+  }
+
+  // 2. Reply-looking subject from a known customer with a matching ticket.
+  if (!isReplySubject(input.subject)) return null;
+
+  const normalized = normalizeSubject(input.subject);
+  if (!normalized) return null;
+
+  const { data: candidates } = await supabase
+    .from("tickets")
+    .select("id, subject, customer:customers!inner(email)")
+    .eq("organization_id", orgId)
+    .eq("customer.email", input.from.trim().toLowerCase())
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const match = candidates?.find(
+    (t) => normalizeSubject(t.subject) === normalized
+  );
+  return match?.id ?? null;
+}
 
 /** Find the org that owns a channel token (settings key + value.token). */
 export async function orgForToken(

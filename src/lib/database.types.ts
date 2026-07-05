@@ -549,6 +549,7 @@ export type Database = {
           csat_rating: number | null;
           csat_sent_at: string | null;
           csat_token: string;
+          email_ref: string;
           customer_id: string | null;
           first_response_at: string | null;
           id: string;
@@ -572,6 +573,7 @@ export type Database = {
           csat_rating?: number | null;
           csat_sent_at?: string | null;
           csat_token?: string;
+          email_ref?: string;
           customer_id?: string | null;
           first_response_at?: string | null;
           id?: string;
@@ -595,6 +597,7 @@ export type Database = {
           csat_rating?: number | null;
           csat_sent_at?: string | null;
           csat_token?: string;
+          email_ref?: string;
           customer_id?: string | null;
           first_response_at?: string | null;
           id?: string;

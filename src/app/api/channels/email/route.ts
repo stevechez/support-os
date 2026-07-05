@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createInboundTicket, orgForToken } from "@/lib/channels/inbound";
+import {
+  appendInboundMessage,
+  createInboundTicket,
+  orgForToken,
+  resolveInboundTicket,
+} from "@/lib/channels/inbound";
 import { clientIp, rateLimit } from "@/lib/channels/rate-limit";
+import { stripEmailRef } from "@/lib/channels/threading";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -62,15 +68,27 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const subject = payload.subject?.trim() || "(no subject)";
+
   try {
+    // Thread replies onto the existing ticket when we can identify it.
+    const existingId = await resolveInboundTicket(supabase, orgId, {
+      from,
+      subject,
+    });
+    if (existingId) {
+      await appendInboundMessage(supabase, orgId, existingId, text);
+      return NextResponse.json({ ticketId: existingId, threaded: true });
+    }
+
     const { ticketId } = await createInboundTicket(supabase, orgId, {
       channel: "email",
       email: from,
       name: payload.name,
-      subject: payload.subject?.trim() || "(no subject)",
+      subject: stripEmailRef(subject) || "(no subject)",
       body: text,
     });
-    return NextResponse.json({ ticketId });
+    return NextResponse.json({ ticketId, threaded: false });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Server error" },

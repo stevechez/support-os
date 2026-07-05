@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { sendEmail } from "@/lib/channels/email-outbound";
+import { withEmailRef } from "@/lib/channels/threading";
 import type { Database } from "@/lib/database.types";
 
 type Client = SupabaseClient<Database>;
@@ -29,7 +30,7 @@ export async function sendCsatSurvey(
   const { data: ticket } = await supabase
     .from("tickets")
     .select(
-      "id, subject, channel, csat_token, csat_sent_at, csat_rated_at, customer:customers(name, email)"
+      "id, subject, channel, csat_token, csat_sent_at, csat_rated_at, email_ref, customer:customers(name, email)"
     )
     .eq("id", ticketId)
     .eq("organization_id", orgId)
@@ -79,7 +80,7 @@ export async function sendCsatSurvey(
 
   const result = await sendEmail(supabase, orgId, {
     to: email,
-    subject: "How did we do?",
+    subject: withEmailRef("How did we do?", ticket.email_ref),
     text,
     html,
     headers: { "X-Ticket-Id": ticket.id },
