@@ -7,6 +7,7 @@ import { z } from "zod";
 import { resolveModel } from "@/lib/ai/models";
 import { getOrgModel } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
+import { sendTicketEmail } from "@/lib/channels/email-outbound";
 import type { Database } from "@/lib/database.types";
 import { matches } from "./match";
 import type { Step, Trigger, TriggerEvent } from "./types";
@@ -169,7 +170,22 @@ async function executeStep(
         update.resolved_at = new Date().toISOString();
       }
       await supabase.from("tickets").update(update).eq("id", ticket.id);
-      return step.resolve ? "AI replied & resolved" : "AI replied";
+
+      // Email-channel tickets: deliver the AI reply to the customer.
+      let delivery = "";
+      if (ticket.channel === "email" && ticket.customer?.email) {
+        const sent = await sendTicketEmail(supabase, orgId, {
+          ticketId: ticket.id,
+          to: ticket.customer.email,
+          subject: ticket.subject,
+          body: reply,
+        });
+        delivery = sent.ok ? " & emailed" : " (email failed)";
+      }
+
+      return step.resolve
+        ? `AI replied${delivery} & resolved`
+        : `AI replied${delivery}`;
     }
 
     case "set_priority":

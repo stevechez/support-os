@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   regenerateChatToken,
+  saveEmailFrom,
   saveSlackWebhook,
   toggleChatWidget,
   toggleInboundEmail,
@@ -96,16 +97,24 @@ export function IntegrationsSettings({
   chatWidget,
   inboundEmail,
   slackWebhookUrl,
+  emailFromAddress,
+  resendConfigured,
   serviceRoleConfigured,
 }: {
   chatWidget: { enabled?: boolean; token?: string };
   inboundEmail: { enabled?: boolean; token?: string };
   slackWebhookUrl: string;
+  emailFromAddress: string;
+  resendConfigured: boolean;
   serviceRoleConfigured: boolean;
 }) {
   const [, startTransition] = useTransition();
   const [slackState, slackAction, slackPending] = useActionState(
     saveSlackWebhook,
+    {}
+  );
+  const [fromState, fromAction, fromPending] = useActionState(
+    saveEmailFrom,
     {}
   );
 
@@ -220,6 +229,53 @@ export function IntegrationsSettings({
             />
           </CardContent>
         )}
+      </Card>
+
+      {/* Outbound email */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Mail className="size-4" />
+            <div>
+              <CardTitle className="text-base">Outbound email</CardTitle>
+              <CardDescription>
+                Replies on email tickets are delivered to the customer via
+                Resend — including AI auto-replies.
+                {!resendConfigured &&
+                  " Set RESEND_API_KEY in .env.local to enable."}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form action={fromAction} className="flex items-end gap-2">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="from_address">Sender address</Label>
+              <Input
+                id="from_address"
+                name="from_address"
+                defaultValue={emailFromAddress}
+                placeholder="Support <help@yourdomain.com>"
+              />
+            </div>
+            <Button type="submit" disabled={fromPending}>
+              {fromPending ? "Saving…" : "Save"}
+            </Button>
+          </form>
+          <p className="mt-2 text-xs text-muted-foreground">
+            The domain must be verified in your Resend account. Left empty,
+            Resend&apos;s test sender is used (delivers only to your own
+            address).
+          </p>
+          {fromState.error && (
+            <p className="mt-2 text-sm text-destructive">{fromState.error}</p>
+          )}
+          {fromState.success && (
+            <p className="mt-2 text-sm text-emerald-400">
+              {fromState.success}
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       {/* Slack */}

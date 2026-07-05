@@ -35,6 +35,9 @@ export default async function SettingsPage() {
     token?: string;
   };
   const slack = (byKey["slack"] ?? {}) as { webhook_url?: string };
+  const emailOutbound = (byKey["email_outbound"] ?? {}) as {
+    from_address?: string;
+  };
 
   const org = current.member.organization as unknown as {
     name: string;
@@ -88,6 +91,8 @@ export default async function SettingsPage() {
         chatWidget={chatWidget}
         inboundEmail={inboundEmail}
         slackWebhookUrl={slack.webhook_url ?? ""}
+        emailFromAddress={emailOutbound.from_address ?? ""}
+        resendConfigured={!!process.env.RESEND_API_KEY}
         serviceRoleConfigured={!!process.env.SUPABASE_SERVICE_ROLE_KEY}
       />
     </div>

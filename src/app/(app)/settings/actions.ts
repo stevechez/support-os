@@ -42,6 +42,20 @@ export async function toggleInboundEmail(
   await upsertSetting("inbound_email", { enabled, token });
 }
 
+export async function saveEmailFrom(
+  _prev: { error?: string; success?: string },
+  formData: FormData
+): Promise<{ error?: string; success?: string }> {
+  const from = (formData.get("from_address") as string)?.trim();
+  if (from && !/^.+<[^@\s]+@[^@\s]+\.[^@\s]+>$|^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(from)) {
+    return {
+      error: "Use an email address, optionally with a display name: Support <help@yourdomain.com>",
+    };
+  }
+  await upsertSetting("email_outbound", { from_address: from });
+  return { success: from ? "Sender address saved." : "Sender address cleared." };
+}
+
 export async function saveSlackWebhook(
   _prev: { error?: string; success?: string },
   formData: FormData

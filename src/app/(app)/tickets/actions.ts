@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 
 import { runAutomations } from "@/lib/automations/engine";
+import { sendTicketEmail } from "@/lib/channels/email-outbound";
 import type { TicketPriority, TicketStatus } from "@/lib/database.types";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
@@ -157,7 +158,9 @@ export async function sendReply(formData: FormData) {
   if (!isInternal) {
     const { data: ticket } = await supabase
       .from("tickets")
-      .select("first_response_at, status")
+      .select(
+        "first_response_at, status, channel, subject, customer:customers(email)"
+      )
       .eq("id", ticketId)
       .single();
 
@@ -169,6 +172,20 @@ export async function sendReply(formData: FormData) {
         status: ticket?.status === "open" ? "waiting" : ticket?.status,
       })
       .eq("id", ticketId);
+
+    // Email-channel tickets: deliver the reply to the customer's inbox.
+    const customerEmail = ticket?.customer?.email;
+    if (ticket?.channel === "email" && customerEmail) {
+      const orgId = current.member.organization_id;
+      after(() =>
+        sendTicketEmail(supabase, orgId, {
+          ticketId,
+          to: customerEmail,
+          subject: ticket.subject,
+          body,
+        })
+      );
+    }
   }
 
   revalidateTicketPages();
