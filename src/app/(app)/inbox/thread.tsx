@@ -37,6 +37,12 @@ export function Thread({
             <p className="truncate text-xs text-muted-foreground">
               {customerName}
               {ticket.tags.length > 0 && ` · ${ticket.tags.join(", ")}`}
+              {ticket.csat_rating != null && (
+                <span className="text-amber-400">
+                  {" "}
+                  · ★ {ticket.csat_rating}/5
+                </span>
+              )}
             </p>
           </div>
         </div>

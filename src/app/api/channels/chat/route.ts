@@ -27,6 +27,8 @@ export async function OPTIONS() {
  *   → { ticketId }
  * POST { token, action: "reply", ticketId, message }
  *   → { ok }
+ * POST { token, action: "rate", ticketId, rating }
+ *   → { ok }
  */
 export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
@@ -41,6 +43,7 @@ export async function POST(request: NextRequest) {
     name?: string;
     message?: string;
     ticketId?: string;
+    rating?: number;
   };
   try {
     payload = await request.json();
@@ -66,6 +69,38 @@ export async function POST(request: NextRequest) {
     return cors(
       NextResponse.json({ error: "Invalid token" }, { status: 401 })
     );
+  }
+
+  // Rating doesn't carry a message.
+  if (payload.action === "rate" && payload.ticketId) {
+    const rating = Number(payload.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return cors(
+        NextResponse.json({ error: "Rating must be 1-5" }, { status: 400 })
+      );
+    }
+    const { data: ticket } = await supabase
+      .from("tickets")
+      .select("id, csat_rated_at")
+      .eq("id", payload.ticketId)
+      .eq("organization_id", orgId)
+      .maybeSingle();
+    if (!ticket) {
+      return cors(
+        NextResponse.json({ error: "Ticket not found" }, { status: 404 })
+      );
+    }
+    if (!ticket.csat_rated_at) {
+      await supabase
+        .from("tickets")
+        .update({
+          csat_rating: rating,
+          csat_rated_at: new Date().toISOString(),
+          csat_sent_at: new Date().toISOString(),
+        })
+        .eq("id", ticket.id);
+    }
+    return cors(NextResponse.json({ ok: true }));
   }
 
   const message = payload.message?.trim();
@@ -154,7 +189,7 @@ export async function GET(request: NextRequest) {
 
   const { data: ticket } = await supabase
     .from("tickets")
-    .select("id, status")
+    .select("id, status, csat_rating")
     .eq("id", ticketId)
     .eq("organization_id", orgId)
     .maybeSingle();
@@ -174,6 +209,10 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: true });
 
   return cors(
-    NextResponse.json({ status: ticket.status, messages: messages ?? [] })
+    NextResponse.json({
+      status: ticket.status,
+      rating: ticket.csat_rating,
+      messages: messages ?? [],
+    })
   );
 }

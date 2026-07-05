@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, SendHorizontal, Sparkles } from "lucide-react";
+import { Loader2, SendHorizontal, Sparkles, Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ export function WidgetChat() {
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [status, setStatus] = useState<string>("open");
+  const [rating, setRating] = useState<number | null>(null);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [input, setInput] = useState("");
@@ -53,6 +55,8 @@ export function WidgetChat() {
       }
       const data = await res.json();
       if (data.messages) setMessages(data.messages);
+      if (data.status) setStatus(data.status);
+      setRating(data.rating ?? null);
     } catch {
       // Network hiccup — keep the last known messages.
     }
@@ -190,6 +194,59 @@ export function WidgetChat() {
       ) : (
         <>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {(status === "resolved" || status === "closed") &&
+              rating === null && (
+                <div className="rounded-xl border bg-card p-3 text-center">
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    This conversation was resolved. How did we do?
+                  </p>
+                  <div className="flex justify-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        aria-label={`Rate ${n} out of 5`}
+                        onClick={async () => {
+                          setRating(n);
+                          await fetch("/api/channels/chat", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              token,
+                              action: "rate",
+                              ticketId,
+                              rating: n,
+                            }),
+                          }).catch(() => setRating(null));
+                        }}
+                        className="rounded-lg p-1 text-muted-foreground transition-colors hover:text-amber-400"
+                      >
+                        <Star className="size-5" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            {rating !== null && (
+              <div className="rounded-xl border bg-card p-3 text-center">
+                <div className="flex justify-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={cn(
+                        "size-4",
+                        n <= rating
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-muted-foreground/40"
+                      )}
+                    />
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Thanks for your feedback!
+                </p>
+              </div>
+            )}
             {messages.map((message) => {
               const mine = message.sender === "customer";
               return (

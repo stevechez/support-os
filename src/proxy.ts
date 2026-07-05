@@ -32,8 +32,12 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Public routes: APIs (channel + webhooks) and the embeddable chat widget.
-  if (pathname.startsWith("/api/") || pathname === "/widget") {
+  // Public routes: APIs, the chat widget, and CSAT rating links.
+  if (
+    pathname.startsWith("/api/") ||
+    pathname === "/widget" ||
+    pathname.startsWith("/rate/")
+  ) {
     return response;
   }
 

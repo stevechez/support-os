@@ -37,6 +37,65 @@ async function fromAddress(supabase: Client, orgId: string): Promise<string> {
   );
 }
 
+/** Low-level Resend delivery. */
+export async function sendEmail(
+  supabase: Client,
+  orgId: string,
+  input: {
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    headers?: Record<string, string>;
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return { ok: false, error: "RESEND_API_KEY not configured" };
+  }
+
+  const from = await fromAddress(supabase, orgId);
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [input.to],
+        subject: input.subject,
+        text: input.text,
+        html: input.html,
+        headers: input.headers,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      return {
+        ok: false,
+        error: data?.message ?? `Resend error (${res.status})`,
+      };
+    }
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Email delivery failed",
+    };
+  }
+}
+
+export function textAsHtml(text: string): string {
+  return `<div style="font-family:sans-serif;line-height:1.6;white-space:pre-wrap">${escapeHtml(text)}</div>`;
+}
+
 /**
  * Send a ticket reply to the customer via Resend.
  * On failure, drops an internal note on the ticket so agents notice.
@@ -51,44 +110,17 @@ export async function sendTicketEmail(
     body: string;
   }
 ): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return { ok: false, error: "RESEND_API_KEY not configured" };
-  }
-
-  const from = await fromAddress(supabase, orgId);
   const subject = input.subject.startsWith("Re:")
     ? input.subject
     : `Re: ${input.subject}`;
 
-  let error: string | undefined;
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [input.to],
-        subject,
-        text: input.body,
-        html: `<div style="font-family:sans-serif;line-height:1.6;white-space:pre-wrap">${escapeHtml(input.body)}</div>`,
-        headers: { "X-Ticket-Id": input.ticketId },
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!res.ok) {
-      const data = (await res.json().catch(() => null)) as {
-        message?: string;
-      } | null;
-      error = data?.message ?? `Resend error (${res.status})`;
-    }
-  } catch (e) {
-    error = e instanceof Error ? e.message : "Email delivery failed";
-  }
+  const { error } = await sendEmail(supabase, orgId, {
+    to: input.to,
+    subject,
+    text: input.body,
+    html: textAsHtml(input.body),
+    headers: { "X-Ticket-Id": input.ticketId },
+  });
 
   if (error) {
     // Surface the failure in the thread so it isn't silent.

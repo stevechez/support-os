@@ -544,6 +544,11 @@ export type Database = {
           assignee_id: string | null;
           channel: string;
           created_at: string;
+          csat_comment: string | null;
+          csat_rated_at: string | null;
+          csat_rating: number | null;
+          csat_sent_at: string | null;
+          csat_token: string;
           customer_id: string | null;
           first_response_at: string | null;
           id: string;
@@ -562,6 +567,11 @@ export type Database = {
           assignee_id?: string | null;
           channel?: string;
           created_at?: string;
+          csat_comment?: string | null;
+          csat_rated_at?: string | null;
+          csat_rating?: number | null;
+          csat_sent_at?: string | null;
+          csat_token?: string;
           customer_id?: string | null;
           first_response_at?: string | null;
           id?: string;
@@ -580,6 +590,11 @@ export type Database = {
           assignee_id?: string | null;
           channel?: string;
           created_at?: string;
+          csat_comment?: string | null;
+          csat_rated_at?: string | null;
+          csat_rating?: number | null;
+          csat_sent_at?: string | null;
+          csat_token?: string;
           customer_id?: string | null;
           first_response_at?: string | null;
           id?: string;

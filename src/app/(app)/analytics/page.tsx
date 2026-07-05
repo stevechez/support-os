@@ -46,7 +46,7 @@ export default async function AnalyticsPage({
   const { data: tickets } = await supabase
     .from("tickets")
     .select(
-      "created_at, status, priority, sentiment, channel, tags, ai_resolved, first_response_at, resolved_at"
+      "created_at, status, priority, sentiment, channel, tags, ai_resolved, first_response_at, resolved_at, csat_rating"
     )
     .gte("created_at", since.toISOString());
 
@@ -127,6 +127,19 @@ export default async function AnalyticsPage({
         )
       : "—";
 
+  const ratedRows = rows.filter((t) => t.csat_rating !== null);
+  const avgCsat =
+    ratedRows.length > 0
+      ? `${(
+          ratedRows.reduce((sum, t) => sum + (t.csat_rating ?? 0), 0) /
+          ratedRows.length
+        ).toFixed(1)} / 5`
+      : "—";
+  const csatDist = [5, 4, 3, 2, 1].map((n) => ({
+    label: `${n} star${n === 1 ? "" : "s"}`,
+    count: ratedRows.filter((t) => t.csat_rating === n).length,
+  }));
+
   const avgResolution =
     resolved.length > 0
       ? formatDuration(
@@ -164,7 +177,7 @@ export default async function AnalyticsPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <Kpi
           label="Tickets"
           value={String(rows.length)}
@@ -177,6 +190,15 @@ export default async function AnalyticsPage({
         />
         <Kpi label="Avg first response" value={avgResponse} />
         <Kpi label="Avg time to resolve" value={avgResolution} />
+        <Kpi
+          label="CSAT"
+          value={avgCsat}
+          hint={
+            ratedRows.length > 0
+              ? `${ratedRows.length} response${ratedRows.length === 1 ? "" : "s"}`
+              : "no responses yet"
+          }
+        />
       </div>
 
       <Card>
@@ -264,7 +286,25 @@ export default async function AnalyticsPage({
           </CardContent>
         </Card>
 
-        <Card className="sm:col-span-2 lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">CSAT ratings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Distribution
+              items={csatDist}
+              colors={{
+                "5 stars": "bg-emerald-400/70",
+                "4 stars": "bg-emerald-400/50",
+                "3 stars": "bg-amber-400/60",
+                "2 stars": "bg-orange-400/60",
+                "1 star": "bg-red-400/70",
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader>
             <CardTitle className="text-sm">Top tags</CardTitle>
           </CardHeader>

@@ -37,6 +37,7 @@ export default async function DashboardPage() {
     { data: resolvedTickets },
     { data: respondedTickets },
     { data: recentMessages },
+    { data: ratedTickets },
   ] = await Promise.all([
     supabase
       .from("tickets")
@@ -64,6 +65,10 @@ export default async function DashboardPage() {
       .select("id, body, sender, created_at, ticket:tickets(id, subject)")
       .order("created_at", { ascending: false })
       .limit(6),
+    supabase
+      .from("tickets")
+      .select("csat_rating")
+      .not("csat_rating", "is", null),
   ]);
 
   const resolved = resolvedTickets ?? [];
@@ -89,6 +94,15 @@ export default async function DashboardPage() {
         )
       : "—";
 
+  const rated = ratedTickets ?? [];
+  const csat =
+    rated.length > 0
+      ? `${(
+          rated.reduce((sum, t) => sum + (t.csat_rating ?? 0), 0) /
+          rated.length
+        ).toFixed(1)} / 5`
+      : "—";
+
   const metrics = [
     { label: "Today's Tickets", value: String(todayCount ?? 0), icon: Ticket },
     { label: "AI Resolution Rate", value: aiRate, icon: Bot },
@@ -98,7 +112,7 @@ export default async function DashboardPage() {
       icon: MessagesSquare,
     },
     { label: "Avg Response Time", value: avgResponse, icon: Clock },
-    { label: "Customer Satisfaction", value: "—", icon: Smile },
+    { label: "Customer Satisfaction", value: csat, icon: Smile },
     {
       label: "Escalations",
       value: String(escalations ?? 0),

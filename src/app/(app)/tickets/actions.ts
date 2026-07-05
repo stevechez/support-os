@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 
+import { headers } from "next/headers";
+
 import { runAutomations } from "@/lib/automations/engine";
 import { sendTicketEmail } from "@/lib/channels/email-outbound";
+import { sendCsatSurvey } from "@/lib/csat";
 import type { TicketPriority, TicketStatus } from "@/lib/database.types";
 import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
@@ -115,6 +118,17 @@ export async function updateTicketStatus(
           : null,
     })
     .eq("id", ticketId);
+
+  // Resolving offers the customer a CSAT survey (once).
+  if (status === "resolved") {
+    const headerList = await headers();
+    const origin =
+      headerList.get("origin") ??
+      `https://${headerList.get("host") ?? "localhost:3000"}`;
+    const orgId = gate.current.member.organization_id;
+    after(() => sendCsatSurvey(supabase, orgId, ticketId, origin));
+  }
+
   revalidateTicketPages();
 }
 

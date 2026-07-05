@@ -8,6 +8,7 @@ import { resolveModel } from "@/lib/ai/models";
 import { getOrgModel } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
 import { sendTicketEmail } from "@/lib/channels/email-outbound";
+import { sendCsatSurvey } from "@/lib/csat";
 import type { Database } from "@/lib/database.types";
 import { matches } from "./match";
 import type { Step, Trigger, TriggerEvent } from "./types";
@@ -183,6 +184,10 @@ async function executeStep(
         delivery = sent.ok ? " & emailed" : " (email failed)";
       }
 
+      if (step.resolve) {
+        await sendCsatSurvey(supabase, orgId, ticket.id);
+      }
+
       return step.resolve
         ? `AI replied${delivery} & resolved`
         : `AI replied${delivery}`;
@@ -206,6 +211,9 @@ async function executeStep(
               : null,
         })
         .eq("id", ticket.id);
+      if (step.status === "resolved") {
+        await sendCsatSurvey(supabase, orgId, ticket.id);
+      }
       return `status → ${step.status}`;
 
     case "add_tag": {
