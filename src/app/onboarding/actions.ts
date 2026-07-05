@@ -30,29 +30,27 @@ export async function createWorkspace(
     "-" +
     Math.random().toString(36).slice(2, 6);
 
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert({ name, slug })
-    .select()
-    .single();
+  // Atomic org + owner-membership creation (RLS-safe via SQL function).
+  const { data: orgId, error: orgError } = await supabase.rpc(
+    "create_workspace",
+    { p_name: name, p_slug: slug }
+  );
 
-  if (orgError) return { error: orgError.message };
-
-  const { data: member, error: memberError } = await supabase
-    .from("members")
-    .insert({
-      organization_id: org.id,
-      user_id: user.id,
-      role: "owner",
-      display_name: user.email?.split("@")[0] ?? "Owner",
-    })
-    .select()
-    .single();
-
-  if (memberError) return { error: memberError.message };
+  if (orgError || !orgId) {
+    return { error: orgError?.message ?? "Could not create workspace." };
+  }
 
   if (withDemo) {
-    await seedDemoData(supabase, org.id, member.id);
+    const { data: member } = await supabase
+      .from("members")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (member) {
+      await seedDemoData(supabase, orgId, member.id);
+    }
   }
 
   redirect("/dashboard");

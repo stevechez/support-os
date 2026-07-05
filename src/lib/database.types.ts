@@ -663,6 +663,10 @@ export type Database = {
       };
       rate_limit_gc: { Args: never; Returns: undefined };
       redeem_invitation: { Args: never; Returns: string | null };
+      create_workspace: {
+        Args: { p_name: string; p_slug: string };
+        Returns: string;
+      };
       match_knowledge_chunks: {
         Args: {
           query_embedding: string;

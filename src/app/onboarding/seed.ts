@@ -222,13 +222,4 @@ export async function seedDemoData(
   ];
 
   await supabase.from("messages").insert(messages);
-
-  await supabase.from("activity_log").insert([
-    {
-      organization_id: orgId,
-      actor_type: "system",
-      action: "workspace.created",
-      metadata: { demo: true },
-    },
-  ]);
 }
