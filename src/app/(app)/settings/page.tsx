@@ -7,7 +7,9 @@ import { getAiUsageThisMonth, getBilling } from "@/lib/billing/usage";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { BillingSettings } from "./billing-settings";
+import { DataExportSettings } from "./export-settings";
 import { IntegrationsSettings } from "./integrations-settings";
+import { SecuritySettings } from "./security-settings";
 import { WorkspaceSettings } from "./workspace-settings";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -58,6 +60,11 @@ export default async function SettingsPage() {
   const canManageBilling =
     current.member.role === "owner" || current.member.role === "admin";
 
+  const { data: mfaFactors } = await supabase.auth.mfa.listFactors();
+  const verifiedFactors = (mfaFactors?.totp ?? []).filter(
+    (f) => f.status === "verified"
+  );
+
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-8">
       <div>
@@ -95,6 +102,10 @@ export default async function SettingsPage() {
         resendConfigured={!!process.env.RESEND_API_KEY}
         serviceRoleConfigured={!!process.env.SUPABASE_SERVICE_ROLE_KEY}
       />
+
+      <SecuritySettings factors={verifiedFactors} />
+
+      <DataExportSettings canManage={canManageBilling} />
     </div>
   );
 }
