@@ -38,16 +38,36 @@ export async function sendCsatSurvey(
 
   if (!ticket || ticket.csat_sent_at || ticket.csat_rated_at) return;
 
-  await supabase
+  // Atomically claim the send: only one concurrent caller (e.g. an
+  // automation step racing a manual resolve) should proceed past here.
+  // Claiming first (rather than after a successful send) closes that
+  // race, but means we must roll the claim back below if we don't
+  // actually deliver anything — otherwise a failed/skipped send would
+  // be permanently mis-recorded as sent and never retried.
+  const { data: claimed } = await supabase
     .from("tickets")
     .update({ csat_sent_at: new Date().toISOString() })
-    .eq("id", ticketId);
+    .eq("id", ticketId)
+    .is("csat_sent_at", null)
+    .is("csat_rated_at", null)
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return; // lost the race to another caller
 
-  // Chat tickets rate inline in the widget — nothing to send.
+  // Chat tickets rate inline in the widget — nothing to send, so the
+  // claim above is the correct final state.
   if (ticket.channel === "chat") return;
 
   const email = ticket.customer?.email;
-  if (!email || !process.env.RESEND_API_KEY) return;
+  if (!email || !process.env.RESEND_API_KEY) {
+    // Nothing we can do yet (no address, or email not configured).
+    // Release the claim so a future resolve can retry once fixed.
+    await supabase
+      .from("tickets")
+      .update({ csat_sent_at: null })
+      .eq("id", ticketId);
+    return;
+  }
 
   const base = siteUrl(origin);
   const link = (score: number) =>
@@ -88,5 +108,19 @@ export async function sendCsatSurvey(
 
   if (!result.ok) {
     console.error(`[csat] survey email failed for ${ticketId}:`, result.error);
+    // Release the claim so the next resolve retries the send, and
+    // leave a visible trail — mirrors how outbound reply failures
+    // already surface to agents.
+    await supabase
+      .from("tickets")
+      .update({ csat_sent_at: null })
+      .eq("id", ticketId);
+    await supabase.from("messages").insert({
+      organization_id: orgId,
+      ticket_id: ticketId,
+      sender: "system",
+      body: `CSAT survey email to ${email} failed: ${result.error}`,
+      is_internal: true,
+    });
   }
 }
