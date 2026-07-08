@@ -162,7 +162,7 @@ export default function Home() {
 							className="mb-6 gap-1.5 border-border bg-card/50 px-3 py-1 text-xs font-normal text-muted-foreground"
 						>
 							<Zap className="size-3 text-amber-400" />
-							AI-native operations, live in minutes
+							For teams drowning in repetitive tickets
 						</Badge>
 
 						<h1 className="font-serif text-5xl leading-[1.08] tracking-tight sm:text-7xl">
@@ -172,9 +172,11 @@ export default function Home() {
 						</h1>
 
 						<p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-							SupportOS is the calm inbox for customer operations. AI instantly
-							drafts, classifies, and resolves routine conversations—grounded
-							strictly in your workspace documentation.
+							SupportOS is the calm inbox for customer operations—one place for
+							email, chat, and Slack conversations. It drafts replies,
+							classifies requests, and resolves the repetitive ones
+							automatically, grounded in your own documentation, while your
+							team stays in control of everything else.
 						</p>
 
 						<div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -193,9 +195,27 @@ export default function Home() {
 							</Button>
 						</div>
 						<p className="mt-4 text-xs text-muted-foreground">
-							No credit card required · Connect your own keys to pay for raw
-							tokens directly
+							No credit card required · Bring your own AI keys—pay providers
+							directly, zero markup
 						</p>
+
+						<div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+							{[
+								'Email',
+								'Chat Widget',
+								'AI Knowledge Base',
+								'Automations',
+								'Slack',
+							].map(capability => (
+								<span
+									key={capability}
+									className="flex items-center gap-1.5"
+								>
+									<Check className="size-3.5 text-emerald-400" />
+									{capability}
+								</span>
+							))}
+						</div>
 					</div>
 
 					{/* Product mockup */}
