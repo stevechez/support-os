@@ -6,6 +6,22 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AuthState = { error?: string; message?: string };
 
+/**
+ * Supabase/GoTrue errors are usually a clean sentence, but some failure
+ * modes (e.g. the configured SMTP sender domain being unverified) return
+ * a malformed response that the client library can't turn into a real
+ * message — the fallback ends up being something like the literal
+ * string "{}", which is bewildering to show a user. Never surface
+ * anything that isn't a real sentence.
+ */
+function friendlyAuthError(message: string | undefined): string {
+  const trimmed = message?.trim();
+  if (!trimmed || /^[{[]/.test(trimmed)) {
+    return "Something went wrong on our end. Please try again in a moment.";
+  }
+  return trimmed;
+}
+
 export async function login(
   _prev: AuthState,
   formData: FormData
@@ -20,7 +36,7 @@ export async function login(
     password,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyAuthError(error.message) };
 
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
@@ -40,7 +56,7 @@ export async function signup(
 
   const { data, error } = await supabase.auth.signUp({ email, password });
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyAuthError(error.message) };
 
   // Supabase intentionally returns a 200 with no error when the email is
   // already registered, so signup can't be used to enumerate accounts.
@@ -82,7 +98,7 @@ export async function forgotPassword(
     redirectTo: `${origin}/auth/callback?next=/reset-password`,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyAuthError(error.message) };
   return {
     message:
       "If an account exists for that email, a reset link is on its way.",
@@ -106,6 +122,6 @@ export async function updatePassword(
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyAuthError(error.message) };
   redirect("/dashboard");
 }

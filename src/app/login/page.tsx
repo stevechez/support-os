@@ -116,7 +116,11 @@ function LoginPageInner() {
                 {state.error && (
                   <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive">
                     <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                    <span>{state.error}</span>
+                    <span>
+                      {typeof state.error === "string" && !/^[{[]/.test(state.error)
+                        ? state.error
+                        : "Something went wrong on our end. Please try again in a moment."}
+                    </span>
                   </div>
                 )}
                 {state.message && !state.error && (
