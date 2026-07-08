@@ -38,11 +38,24 @@ export async function signup(
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
 
   if (error) return { error: error.message };
+
+  // Supabase intentionally returns a 200 with no error when the email is
+  // already registered, so signup can't be used to enumerate accounts.
+  // The tell is an empty `identities` array on the returned (decoy) user —
+  // no confirmation email is actually sent in this case. Surface that
+  // distinctly instead of showing the same "check your email" message.
+  if (data.user && data.user.identities?.length === 0) {
+    return {
+      error:
+        "An account with this email already exists. Try signing in, or use \"Forgot password?\" if you don't remember it.",
+    };
+  }
+
   return {
-    message: "Check your email to confirm your account.",
+    message: "Account created — check your email to confirm it before signing in.",
   };
 }
 

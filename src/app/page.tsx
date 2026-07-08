@@ -31,79 +31,79 @@ export const metadata: Metadata = {
 const features = [
 	{
 		icon: Sparkles,
-		title: 'AI Copilot',
+		title: 'Resolve conversations faster',
 		description:
-			'Context-aware summaries, suggested replies, intent analysis, and real-time translation—one click each, right inside the conversation.',
+			'AI summaries, suggested replies, intent analysis, and translations help your team respond faster.',
 	},
 	{
 		icon: BookOpen,
-		title: 'Knowledge That Answers',
+		title: 'AI grounded in your knowledge',
 		description:
-			'Upload documentation, project files, or URLs. SupportOS indexes your knowledge base to ground every AI draft in factual context—complete with clear citations.',
+			'Connect documentation, files, and URLs so every AI response is based on your actual business information—with clear citations.',
 	},
 	{
 		icon: Workflow,
-		title: 'Visual Automations',
+		title: 'Let repetitive work resolve itself',
 		description:
-			"Build workflows like 'refund request → classify → draft reply → notify a human' in minutes. AI-driven steps with zero code.",
+			'Create AI-powered workflows that classify requests, draft responses, trigger actions, and keep your team focused on what matters.',
 	},
 	{
 		icon: MessagesSquare,
-		title: 'Every Channel, One Inbox',
+		title: 'Every conversation. One place.',
 		description:
-			'An embeddable chat widget, inbound email, and Slack alerts flow into a beautifully structured, Apple Mail–calm interface.',
+			'Bring email, chat, and team alerts together in a calm workspace built for managing every customer interaction.',
 	},
 	{
 		icon: Bot,
-		title: 'Your Models, Your Choice',
+		title: 'AI without the markup',
 		description:
-			'Switch between Claude, GPT, and Gemini instantly. Bring your own API keys to pay model providers directly—zero token markup, zero platform lock-in.',
+			'Use the models you choose, connect your own API keys, and pay providers directly. No hidden token fees. No platform lock-in.',
 	},
 	{
 		icon: ShieldCheck,
-		title: 'Built for Real Teams',
+		title: 'Scale with confidence',
 		description:
-			'Granular roles, organization-level isolation with row-level security, custom usage limits, and a full audit log from day one.',
+			'Manage teams securely with roles, permissions, usage controls, organization isolation, and complete audit history.',
 	},
 ];
 
 const steps = [
 	{
 		number: '01',
-		title: 'Connect your channels',
+		title: 'Bring every conversation together',
 		description:
-			'Drop the chat widget on your site, point your inbound email at SupportOS, and wire Slack for alerts. Live in minutes, not weeks.',
+			'Bring chat, email, and team alerts into one calm workspace. Get your support operations running in minutes, not weeks.',
 	},
 	{
 		number: '02',
-		title: 'Teach it your business',
+		title: 'Ground AI in your knowledge',
 		description:
-			'Upload guidelines, contracts, internal docs, or FAQs. The knowledge base indexes them instantly for semantic search and cited answers.',
+			'Upload guidelines, contracts, internal docs, or FAQs. SupportOS uses your knowledge to create accurate answers with clear citations.',
 	},
 	{
 		number: '03',
-		title: 'Let AI take the routine',
+		title: 'Let AI handle the routine',
 		description:
-			'Automations classify, draft, and auto-resolve repetitive requests. Your team supervises and handles what actually needs a human hand.',
+			'Automations classify, draft, and resolve repetitive requests. Your team supervises AI and focuses on conversations that need a human touch.',
 	},
 ];
 
 const faqs = [
 	{
-		q: 'Which AI models does it use?',
-		a: 'Anthropic Claude, OpenAI GPT, and Google Gemini—fully switchable per workspace. Because you bring your own API keys, you pay the providers directly with absolutely no middleman markup.',
+		q: 'Which AI models can I use?',
+		a: 'SupportOS works with leading AI providers like Claude, GPT, and Gemini. Connect your own API keys, choose the models that fit your workflow, and pay providers directly with no AI markup from SupportOS.',
 	},
 	{
-		q: 'How does the AI ensure accuracy?',
-		a: 'Upload PDFs, Markdown, or URLs to your workspace knowledge base. Content is processed and retrieved semantically, forcing the AI to strictly draft replies based on your actual data—complete with citations.',
+		q: 'How does SupportOS keep AI responses accurate?',
+		a: 'Connect your documentation, files, and URLs to your knowledge base. SupportOS grounds responses in your actual business information and provides citations so your team can trust the answers.',
 	},
 	{
 		q: 'Can AI reply without human supervision?',
-		a: 'Only when you want it to. Automations can either draft replies for human review or completely auto-resolve specific, low-risk conversation tracks that you explicitly define.',
+		a: 'Only when you choose. SupportOS can draft replies for review or automatically resolve specific low-risk workflows that your team defines.',
 	},
 	{
-		q: 'Is our business data securely isolated?',
-		a: 'Yes. Every single workspace is cryptographically isolated using PostgreSQL row-level security (RLS). Public widgets authenticate with revocable tokens, and every administrative action is captured in an audit log.',
+		q: 'Is our business data secure?',
+		a: 'Yes. Each workspace is isolated with enterprise-grade security controls, including row-level security, protected authentication, and complete audit history for administrative actions.',
 	},
 ];
 
@@ -113,12 +113,16 @@ export default function Home() {
 			{/* Nav */}
 			<header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
 				<nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-					<Link href="/" className="flex items-center gap-2.5">
-						<div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-							<Sparkles className="size-4" />
+					<Link href="/" className="flex items-center gap-3">
+						<div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+							<Sparkles className="size-5" />
 						</div>
-						<span className="font-serif text-xl">SupportOS</span>
+
+						<span className="font-serif text-3xl tracking-tight">
+							SupportOS
+						</span>
 					</Link>
+
 					<div className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
 						<a
 							href="#features"
@@ -135,14 +139,17 @@ export default function Home() {
 						>
 							Pricing
 						</a>
+						<a href="#faq" className="transition-colors hover:text-foreground">
+							FAQ
+						</a>
 					</div>
 					<div className="flex items-center gap-2">
 						<Button asChild variant="ghost" size="sm">
 							<Link href="/login">Sign in</Link>
 						</Button>
 						<Button asChild size="sm">
-							<Link href="/login">
-								Get started <ArrowRight className="size-3.5" />
+							<Link href="/login?mode=signup">
+								Start Free <ArrowRight className="size-3.5" />
 							</Link>
 						</Button>
 					</div>
@@ -156,13 +163,32 @@ export default function Home() {
 						aria-hidden
 						className="pointer-events-none absolute inset-x-0 top-0 h-[600px] bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,oklch(0.45_0.08_265/0.25),transparent)]"
 					/>
-					<div className="relative mx-auto max-w-4xl px-6 pb-20 pt-24 text-center sm:pt-32">
+
+					<div className="relative mx-auto max-w-4xl px-6 pb-12 pt-12 text-center sm:pt-16">
+						<div className="mb-2 flex flex-col items-center">
+							<p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+								BuildRail presents
+							</p>
+
+							<Link href="/" className="flex items-center gap-3">
+								<div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+									<Sparkles className="size-5" />
+								</div>
+
+								<span className="font-serif text-3xl tracking-tight">
+									SupportOS
+								</span>
+							</Link>
+						</div>
+					</div>
+					{/* Hero Section Content */}
+					<div className="relative mx-auto max-w-4xl px-6 pb-20 pt-0 text-center">
 						<Badge
 							variant="outline"
 							className="mb-6 gap-1.5 border-border bg-card/50 px-3 py-1 text-xs font-normal text-muted-foreground"
 						>
-							<Zap className="size-3 text-amber-400" />
-							For teams drowning in repetitive tickets
+							<Zap className="size-5 text-amber-400" />
+							For teams buried in customer conversations
 						</Badge>
 
 						<h1 className="font-serif text-5xl leading-[1.08] tracking-tight sm:text-7xl">
@@ -172,16 +198,19 @@ export default function Home() {
 						</h1>
 
 						<p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-							SupportOS is the calm inbox for customer operations—one place for
-							email, chat, and Slack conversations. It drafts replies,
-							classifies requests, and resolves the repetitive ones
-							automatically, grounded in your own documentation, while your
-							team stays in control of everything else.
+							SupportOS is the calm inbox for customer operations—bringing
+							email, chat, and Slack conversations into one place. It drafts
+							replies, classifies requests, and handles routine conversations
+							automatically,{' '}
+							<span className="font-semibold">
+								using only your approved documentation
+							</span>
+							, while your team stays in control of every decision.
 						</p>
 
 						<div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
 							<Button asChild size="lg" className="h-12 px-7 text-base">
-								<Link href="/login">
+								<Link href="/login?mode=signup">
 									Get Started Free <ArrowRight className="size-4" />
 								</Link>
 							</Button>
@@ -194,24 +223,21 @@ export default function Home() {
 								<a href="#how">See how it works</a>
 							</Button>
 						</div>
-						<p className="mt-4 text-xs text-muted-foreground">
-							No credit card required · Bring your own AI keys—pay providers
-							directly, zero markup
+						<p className="mt-4 text-sm text-muted-foreground">
+							No credit card required • Bring your own AI keys • Pay providers
+							directly
 						</p>
 
 						<div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
 							{[
 								'Email',
 								'Chat Widget',
-								'AI Knowledge Base',
+								'Knowledge Base',
 								'Automations',
 								'Slack',
 							].map(capability => (
-								<span
-									key={capability}
-									className="flex items-center gap-1.5"
-								>
-									<Check className="size-3.5 text-emerald-400" />
+								<span key={capability} className="flex items-center gap-1.5">
+									<Check className="size-5 text-emerald-400" />
 									{capability}
 								</span>
 							))}
@@ -351,12 +377,12 @@ export default function Home() {
 					<div className="mx-auto max-w-6xl px-6 py-24">
 						<div className="mx-auto max-w-2xl text-center">
 							<h2 className="font-serif text-4xl tracking-tight sm:text-5xl">
-								Everything you need.
-								<br />
-								<span className="text-muted-foreground">
-									Zero platform AI markup.
-								</span>
+								Everything your team needs to stay out of the inbox.
 							</h2>
+							<p className="mt-4 text-muted-foreground text-lg">
+								Email, chat, AI, documentation, automations, and analytics—all
+								working together in one calm workspace.
+							</p>
 						</div>
 
 						<div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -385,9 +411,9 @@ export default function Home() {
 							<h2 className="font-serif text-4xl tracking-tight sm:text-5xl">
 								Productive in minutes
 							</h2>
-							<p className="mt-4 text-muted-foreground">
-								No complex enterprise implementation projects. Connect, upload
-								documentation, and let it run.
+							<p className="mt-4 text-muted-foreground text-lg">
+								Connect your channels, add your knowledge, and let AI handle the
+								routine work.
 							</p>
 						</div>
 
@@ -412,20 +438,23 @@ export default function Home() {
 					<div className="mx-auto max-w-4xl px-6 py-24">
 						<div className="mx-auto max-w-2xl text-center">
 							<h2 className="font-serif text-4xl tracking-tight sm:text-5xl">
-								Simple infrastructure pricing
+								Simple pricing. Powerful support operations.
 							</h2>
-							<p className="mt-4 text-muted-foreground">
-								Start free to test your live workflows, scale up when you
-								expand.
+							<p className="mt-4 text-muted-foreground text-lg">
+								Start free. Bring your own AI provider. Scale when your support
+								operation grows.
+							</p>
+							<p className="mt-3 text-base text-muted-foreground">
+								No AI markup. You pay your AI provider directly for usage.
 							</p>
 						</div>
 
 						<div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2">
 							{/* Free */}
 							<div className="rounded-2xl border bg-card p-8">
-								<h3 className="font-semibold">Free</h3>
+								<h3 className="font-semibold">Start Free</h3>
 								<p className="mt-1 text-sm text-muted-foreground">
-									Perfect for testing live operational workflows.
+									Explore SupportOS with AI workflows.
 								</p>
 								<p className="mt-6 font-serif text-5xl">$0</p>
 								<ul className="mt-8 space-y-3 text-sm">
@@ -443,7 +472,7 @@ export default function Home() {
 									))}
 								</ul>
 								<Button asChild variant="outline" className="mt-8 w-full">
-									<Link href="/login">Start free</Link>
+									<Link href="/login?mode=signup">Start free</Link>
 								</Button>
 							</div>
 
@@ -454,7 +483,7 @@ export default function Home() {
 								</Badge>
 								<h3 className="font-semibold">Pro</h3>
 								<p className="mt-1 text-sm text-muted-foreground">
-									For operations running completely on autopilot.
+									For teams ready to automate repetitive support work.
 								</p>
 								<p className="mt-6 font-serif text-5xl">
 									$49
@@ -477,8 +506,8 @@ export default function Home() {
 									))}
 								</ul>
 								<Button asChild className="mt-8 w-full">
-									<Link href="/login">
-										Get Pro <ArrowRight className="size-4" />
+									<Link href="/login?mode=signup">
+										Start Pro <ArrowRight className="size-4" />
 									</Link>
 								</Button>
 							</div>
@@ -521,17 +550,17 @@ export default function Home() {
 							<Sparkles className="size-5" />
 						</div>
 						<h2 className="font-serif text-4xl tracking-tight sm:text-5xl">
-							Your AI operations workspace is
+							Your calm support workspace is
 							<br />
 							one sign-up away.
 						</h2>
-						<p className="mx-auto mt-4 max-w-md text-muted-foreground">
-							Create an isolated workspace, load the interactive demo data, and
-							explore the AI Copilot workflow in under two minutes.
+						<p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-muted-foreground sm:max-w-lg sm:text-xl">
+							Connect your channels, add your knowledge, and see how AI can
+							resolve routine support work in minutes.
 						</p>
 						<Button asChild size="lg" className="mt-8 h-12 px-8 text-base">
-							<Link href="/login">
-								Get started free <ArrowRight className="size-4" />
+							<Link href="/login?mode=signup">
+								Start free <ArrowRight className="size-4" />
 							</Link>
 						</Button>
 					</div>
@@ -560,6 +589,9 @@ export default function Home() {
 						>
 							Pricing
 						</a>
+						<a href="#faq" className="transition-colors hover:text-foreground">
+							FAQ
+						</a>
 						<Link
 							href="/login"
 							className="transition-colors hover:text-foreground"
@@ -569,7 +601,7 @@ export default function Home() {
 					</div>
 					<div className="flex items-center gap-1.5">
 						<Globe className="size-3.5" />
-						<span>© {new Date().getFullYear()} SupportOS</span>
+						<span>© 2026 SupportOS. All rights reserved.</span>
 					</div>
 				</div>
 			</footer>
