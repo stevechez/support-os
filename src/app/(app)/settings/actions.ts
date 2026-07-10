@@ -42,6 +42,18 @@ export async function toggleInboundEmail(
   await upsertSetting("inbound_email", { enabled, token });
 }
 
+export async function toggleOrderSync(enabled: boolean, existingToken?: string) {
+  const token = existingToken || randomBytes(18).toString("base64url");
+  await upsertSetting("order_sync", { enabled, token });
+}
+
+export async function regenerateOrderSyncToken() {
+  await upsertSetting("order_sync", {
+    enabled: true,
+    token: randomBytes(18).toString("base64url"),
+  });
+}
+
 export async function saveEmailFrom(
   _prev: { error?: string; success?: string },
   formData: FormData

@@ -58,7 +58,7 @@ export async function resolveInboundTicket(
 /** Find the org that owns a channel token (settings key + value.token). */
 export async function orgForToken(
   supabase: Client,
-  settingsKey: "chat_widget" | "inbound_email",
+  settingsKey: "chat_widget" | "inbound_email" | "order_sync",
   token: string
 ): Promise<string | null> {
   if (!token) return null;

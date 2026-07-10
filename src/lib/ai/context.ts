@@ -2,6 +2,7 @@ import "server-only";
 
 import { embedQuery, embeddingsAvailable } from "@/lib/ai/embeddings";
 import { getCurrentMember } from "@/lib/org";
+import { retrieveOrderContext } from "@/lib/orders/lookup";
 import { createClient } from "@/lib/supabase/server";
 
 /** Load a ticket with customer + transcript, scoped to the current member. */
@@ -12,7 +13,7 @@ export async function loadTicketContext(ticketId: string) {
   const supabase = await createClient();
   const { data: ticket } = await supabase
     .from("tickets")
-    .select("*, customer:customers(name, email, company), messages(*)")
+    .select("*, customer:customers(name, email, company, ai_summary), messages(*)")
     .eq("id", ticketId)
     .maybeSingle();
 
@@ -43,6 +44,22 @@ export async function loadTicketContext(ticketId: string) {
     ticket.customer
       ? `Customer: ${ticket.customer.name ?? ticket.customer.email}${ticket.customer.company ? ` (${ticket.customer.company})` : ""}`
       : null,
+    ticket.customer?.ai_summary
+      ? `Customer history: ${ticket.customer.ai_summary}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const orderContext = await retrieveOrderContext(supabase, current.member.organization_id, {
+    customerId: ticket.customer_id,
+    conversationText: `${ticket.subject}\n${transcript}`,
+  });
+
+  const context = [
+    header,
+    `\n--- Conversation ---\n${transcript}`,
+    orderContext.block ? `\n--- Orders ---\n${orderContext.block}` : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -51,7 +68,8 @@ export async function loadTicketContext(ticketId: string) {
     current,
     supabase,
     ticket,
-    context: `${header}\n\n--- Conversation ---\n${transcript}`,
+    orderContext,
+    context,
   };
 }
 

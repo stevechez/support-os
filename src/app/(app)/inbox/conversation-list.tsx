@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bot, ShieldAlert, Sparkles } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,12 @@ import type { Customer, Message, Ticket } from "@/lib/database.types";
 import { initials, timeAgo } from "@/lib/format";
 import { priorityStyles, sentimentDot } from "@/lib/ticket-ui";
 import { cn } from "@/lib/utils";
+
+const DECISION_ICON = {
+  auto: { icon: Bot, className: "text-emerald-400" },
+  cited: { icon: Sparkles, className: "text-sky-400" },
+  escalated: { icon: ShieldAlert, className: "text-amber-400" },
+} as const;
 
 type TicketRow = Ticket & {
   customer: Pick<Customer, "id" | "name" | "email"> | null;
@@ -90,6 +97,20 @@ export function ConversationList({
                       {ticket.channel}
                     </Badge>
                   )}
+                  {ticket.decision_path &&
+                    (() => {
+                      const meta =
+                        DECISION_ICON[
+                          ticket.decision_path as keyof typeof DECISION_ICON
+                        ];
+                      if (!meta) return null;
+                      const DecisionIcon = meta.icon;
+                      return (
+                        <DecisionIcon
+                          className={cn("size-3 shrink-0", meta.className)}
+                        />
+                      );
+                    })()}
                   <p className="truncate text-xs text-muted-foreground">
                     {preview?.body ?? "No messages yet"}
                   </p>

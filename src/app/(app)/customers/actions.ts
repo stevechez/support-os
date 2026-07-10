@@ -81,6 +81,61 @@ export async function addCustomerTag(customerId: string, tag: string) {
   revalidatePath("/customers");
 }
 
+export type OrderActionState = { error?: string };
+
+export async function createOrder(
+  _prev: OrderActionState,
+  formData: FormData
+): Promise<OrderActionState> {
+  const gate = await requireMember("agent");
+  if (!gate.ok) return { error: gate.error };
+  const { current } = gate;
+
+  const customerId = formData.get("customerId") as string;
+  const orderNumber = ((formData.get("orderNumber") as string) ?? "").trim();
+  const status = (formData.get("status") as string) || "processing";
+  const description = ((formData.get("description") as string) ?? "").trim();
+  const totalRaw = (formData.get("total") as string) ?? "";
+  const trackingNumber = ((formData.get("trackingNumber") as string) ?? "").trim();
+  const expectedDelivery = (formData.get("expectedDelivery") as string) ?? "";
+
+  if (!customerId) return { error: "Missing customer." };
+  if (!orderNumber) return { error: "Order number is required." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("orders").insert({
+    organization_id: current.member.organization_id,
+    customer_id: customerId,
+    order_number: orderNumber,
+    status,
+    description: description || null,
+    total: totalRaw ? Number(totalRaw) : null,
+    tracking_number: trackingNumber || null,
+    expected_delivery: expectedDelivery
+      ? new Date(expectedDelivery).toISOString()
+      : null,
+  });
+
+  if (error) {
+    return {
+      error: error.message.includes("duplicate")
+        ? "An order with that number already exists for this customer."
+        : error.message,
+    };
+  }
+  revalidatePath(`/customers/${customerId}`);
+  return {};
+}
+
+export async function deleteOrder(orderId: string, customerId: string) {
+  const gate = await requireMember("agent");
+  if (!gate.ok) return;
+
+  const supabase = await createClient();
+  await supabase.from("orders").delete().eq("id", orderId);
+  revalidatePath(`/customers/${customerId}`);
+}
+
 export async function removeCustomerTag(customerId: string, tag: string) {
   const gate = await requireMember("agent");
   if (!gate.ok) return;

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "debugId": "f5bb4fe8-4f5c-2524-09a9-ab677ae64770",
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["../../../src/lib/supabase/admin.ts"],"sourcesContent":["import \"server-only\";\n\nimport { createClient as createSupabaseClient } from \"@supabase/supabase-js\";\n\nimport type { Database } from \"@/lib/database.types\";\n\n/**\n * Service-role client for public channel endpoints (chat widget,\n * inbound email). Bypasses RLS — only use after validating a\n * channel token. Requires SUPABASE_SERVICE_ROLE_KEY.\n */\nexport function createAdminClient() {\n  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;\n  if (!key) return null;\n\n  return createSupabaseClient<Database>(\n    process.env.NEXT_PUBLIC_SUPABASE_URL!,\n    key,\n    { auth: { persistSession: false, autoRefreshToken: false } }\n  );\n}\n"],"names":["createAdminClient","key","process","env","SUPABASE_SERVICE_ROLE_KEY","auth","persistSession","autoRefreshToken"],"mappings":"o/BAEA,IAAA,EAAA,EAAA,CAAA,CAAA,mCASO,SAASA,EACd,IAAMC,EAAMC,QAAQC,GAAG,CAACC,yBAAyB,QACjD,AAAKH,EAEE,CAAA,CAFH,CAAM,AAEH,EAAA,YAAA,AAAoB,EAAA,2CAEzBA,EACA,CAAEI,KAAM,CAAEC,gBAAgB,EAAOC,kBAAkB,CAAM,CAAE,GAL5C,IAOnB"}}]
+}

@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Mail,
   MessageSquare,
+  Package,
   RefreshCw,
   Webhook,
 } from "lucide-react";
@@ -23,10 +24,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   regenerateChatToken,
+  regenerateOrderSyncToken,
   saveEmailFrom,
   saveSlackWebhook,
   toggleChatWidget,
   toggleInboundEmail,
+  toggleOrderSync,
 } from "./actions";
 
 function CopyButton({ text }: { text: string }) {
@@ -96,6 +99,7 @@ function Toggle({
 export function IntegrationsSettings({
   chatWidget,
   inboundEmail,
+  orderSync,
   slackWebhookUrl,
   emailFromAddress,
   resendConfigured,
@@ -103,6 +107,7 @@ export function IntegrationsSettings({
 }: {
   chatWidget: { enabled?: boolean; token?: string };
   inboundEmail: { enabled?: boolean; token?: string };
+  orderSync: { enabled?: boolean; token?: string };
   slackWebhookUrl: string;
   emailFromAddress: string;
   resendConfigured: boolean;
@@ -123,6 +128,7 @@ export function IntegrationsSettings({
 
   const chatEnabled = chatWidget.enabled === true;
   const emailEnabled = inboundEmail.enabled === true;
+  const orderSyncEnabled = orderSync.enabled === true;
 
   return (
     <div className="space-y-6">
@@ -227,6 +233,66 @@ export function IntegrationsSettings({
             <CodeBlock
               code={`{ "from": "customer@email.com", "name": "Jane", "subject": "Help!", "text": "Message body" }`}
             />
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Order sync */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Package className="size-4" />
+              <div>
+                <CardTitle className="text-base">Order sync</CardTitle>
+                <CardDescription>
+                  Point your store or CRM&apos;s order webhook here to ground
+                  AI replies in real order status — the AI won&apos;t answer
+                  order questions it can&apos;t verify.
+                </CardDescription>
+              </div>
+            </div>
+            <Toggle
+              checked={orderSyncEnabled}
+              onChange={(v) =>
+                startTransition(() => toggleOrderSync(v, orderSync.token))
+              }
+            />
+          </div>
+        </CardHeader>
+        {orderSyncEnabled && orderSync.token && (
+          <CardContent className="space-y-3">
+            <Label>Webhook endpoint</Label>
+            <CodeBlock
+              code={`${origin}/api/integrations/orders/webhook?token=${orderSync.token}`}
+            />
+            <Label>Expected payload</Label>
+            <CodeBlock
+              code={`{
+  "customerEmail": "jane@email.com",
+  "customerName": "Jane Doe",
+  "orderNumber": "4471",
+  "status": "shipped",
+  "description": "2x Wireless Mouse",
+  "total": 49.98,
+  "trackingNumber": "1Z999AA1",
+  "trackingUrl": "https://…",
+  "orderedAt": "2026-07-01T00:00:00Z",
+  "expectedDelivery": "2026-07-10T00:00:00Z"
+}`}
+            />
+            <p className="text-xs text-muted-foreground">
+              Safe to resend the same order — it upserts on order number, so
+              status-update webhooks just update the existing record.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => startTransition(() => regenerateOrderSyncToken())}
+            >
+              <RefreshCw className="size-3.5" /> Regenerate token
+            </Button>
           </CardContent>
         )}
       </Card>

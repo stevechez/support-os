@@ -36,6 +36,10 @@ export default async function SettingsPage() {
     enabled?: boolean;
     token?: string;
   };
+  const orderSync = (byKey["order_sync"] ?? {}) as {
+    enabled?: boolean;
+    token?: string;
+  };
   const slack = (byKey["slack"] ?? {}) as { webhook_url?: string };
   const emailOutbound = (byKey["email_outbound"] ?? {}) as {
     from_address?: string;
@@ -97,6 +101,7 @@ export default async function SettingsPage() {
       <IntegrationsSettings
         chatWidget={chatWidget}
         inboundEmail={inboundEmail}
+        orderSync={orderSync}
         slackWebhookUrl={slack.webhook_url ?? ""}
         emailFromAddress={emailOutbound.from_address ?? ""}
         resendConfigured={!!process.env.RESEND_API_KEY}

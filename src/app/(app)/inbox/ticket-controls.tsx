@@ -26,6 +26,7 @@ import {
   updateTicketPriority,
   updateTicketStatus,
 } from "../tickets/actions";
+import { DecisionTrace } from "./decision-trace";
 
 export function TicketControls({
   ticket,
@@ -40,6 +41,8 @@ export function TicketControls({
 
   return (
     <div className="flex shrink-0 items-center gap-2">
+      <DecisionTrace ticket={ticket} />
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button type="button">

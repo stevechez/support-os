@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
   CONDITION_FIELDS,
+  DEFAULT_STALE_HOURS,
   STEP_TYPES,
   TRIGGER_EVENTS,
   defaultStep,
@@ -44,11 +45,13 @@ export function Builder({
   automationId,
   members,
   agents,
+  experiments,
 }: {
   initial: Draft;
   automationId?: string;
   members: { id: string; display_name: string | null }[];
   agents: { id: string; name: string }[];
+  experiments: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(initial);
@@ -147,11 +150,16 @@ export function Builder({
             </div>
             <NativeSelect
               value={draft.trigger.event}
-              onChange={(e) =>
+              onChange={(e) => {
+                const event = e.target.value as Trigger["event"];
                 updateTrigger({
-                  event: e.target.value as Trigger["event"],
-                })
-              }
+                  event,
+                  staleAfterHours:
+                    event === "ticket.stale"
+                      ? (draft.trigger.staleAfterHours ?? DEFAULT_STALE_HOURS)
+                      : undefined,
+                });
+              }}
             >
               {TRIGGER_EVENTS.map((event) => (
                 <option key={event.id} value={event.id}>
@@ -159,6 +167,23 @@ export function Builder({
                 </option>
               ))}
             </NativeSelect>
+
+            {draft.trigger.event === "ticket.stale" && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  className="w-24"
+                  value={draft.trigger.staleAfterHours ?? DEFAULT_STALE_HOURS}
+                  onChange={(e) =>
+                    updateTrigger({ staleAfterHours: Number(e.target.value) })
+                  }
+                />
+                <span className="text-sm text-muted-foreground">
+                  hours with no new message, checked every minute
+                </span>
+              </div>
+            )}
 
             {draft.trigger.conditions.map((condition, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -407,22 +432,47 @@ export function Builder({
 
               {(step.type === "ai_draft_reply" ||
                 step.type === "ai_auto_reply") && (
-                <NativeSelect
-                  value={step.agentId ?? ""}
-                  onChange={(e) =>
-                    updateStep(i, {
-                      ...step,
-                      agentId: e.target.value || undefined,
-                    })
-                  }
-                >
-                  <option value="">Default persona</option>
-                  {agents.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <div className="space-y-2">
+                  <NativeSelect
+                    value={step.agentId ?? ""}
+                    disabled={!!step.experimentId}
+                    onChange={(e) =>
+                      updateStep(i, {
+                        ...step,
+                        agentId: e.target.value || undefined,
+                      })
+                    }
+                  >
+                    <option value="">Default persona</option>
+                    {agents.map((agent) => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  <NativeSelect
+                    value={step.experimentId ?? ""}
+                    onChange={(e) =>
+                      updateStep(i, {
+                        ...step,
+                        experimentId: e.target.value || undefined,
+                      })
+                    }
+                  >
+                    <option value="">No experiment — use persona above</option>
+                    {experiments.map((exp) => (
+                      <option key={exp.id} value={exp.id}>
+                        Run experiment: {exp.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  {step.experimentId && (
+                    <p className="text-xs text-muted-foreground">
+                      Traffic is split between the experiment&apos;s two
+                      personas — the persona picker above is ignored.
+                    </p>
+                  )}
+                </div>
               )}
 
               {step.type === "ai_auto_reply" && (
@@ -440,6 +490,75 @@ export function Builder({
                   />
                   Mark ticket resolved after replying
                 </label>
+              )}
+
+              {step.type === "create_appointment" && (
+                <div className="flex gap-2">
+                  <Input
+                    className="flex-1"
+                    value={step.title}
+                    onChange={(e) =>
+                      updateStep(i, {
+                        type: "create_appointment",
+                        title: e.target.value,
+                        offsetHours: step.offsetHours,
+                      })
+                    }
+                    placeholder="Follow-up call"
+                  />
+                  <Input
+                    type="number"
+                    className="w-28"
+                    value={step.offsetHours ?? 24}
+                    onChange={(e) =>
+                      updateStep(i, {
+                        type: "create_appointment",
+                        title: step.title,
+                        offsetHours: Number(e.target.value),
+                      })
+                    }
+                    placeholder="Hours from now"
+                  />
+                </div>
+              )}
+
+              {step.type === "send_sms" && (
+                <Input
+                  value={step.message}
+                  onChange={(e) =>
+                    updateStep(i, { type: "send_sms", message: e.target.value })
+                  }
+                  placeholder="We're looking into this and will follow up shortly."
+                />
+              )}
+
+              {step.type === "update_customer" && (
+                <div className="flex gap-2">
+                  <Input
+                    className="flex-1"
+                    value={step.tag ?? ""}
+                    onChange={(e) =>
+                      updateStep(i, {
+                        type: "update_customer",
+                        tag: e.target.value,
+                        note: step.note,
+                      })
+                    }
+                    placeholder="Tag (optional)"
+                  />
+                  <Input
+                    className="flex-1"
+                    value={step.note ?? ""}
+                    onChange={(e) =>
+                      updateStep(i, {
+                        type: "update_customer",
+                        tag: step.tag,
+                        note: e.target.value,
+                      })
+                    }
+                    placeholder="Note (optional)"
+                  />
+                </div>
               )}
             </CardContent>
           </Card>

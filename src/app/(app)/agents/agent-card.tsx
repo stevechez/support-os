@@ -6,6 +6,7 @@ import { Bot, Thermometer, Trash2, Zap, ZapOff } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { VersionHistoryButton } from "@/components/version-history-button";
 import type { Tables } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
 import { deleteAgent, toggleAgent } from "./actions";
@@ -56,6 +57,11 @@ export function AgentCard({ agent }: { agent: Tables<"agent_configs"> }) {
       </Link>
 
       <div className="flex shrink-0 items-center">
+        <VersionHistoryButton
+          entityType="agent_config"
+          entityId={agent.id}
+          revalidatePath="/agents"
+        />
         <Button
           variant="ghost"
           size="icon"

@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AlertTriangle } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,6 +19,19 @@ import { Distribution, Kpi, VolumeChart } from "./charts";
 export const metadata: Metadata = { title: "Analytics" };
 
 const RANGES = [7, 30, 90] as const;
+
+function countByPath(
+  rows: { decision_path: string | null }[]
+): { label: string; count: number }[] {
+  const map = new Map<string, number>();
+  for (const r of rows) {
+    const key = r.decision_path ?? "unknown";
+    map.set(key, (map.get(key) ?? 0) + 1);
+  }
+  return [...map.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
 
 function formatDuration(ms: number): string {
   const minutes = Math.round(ms / 60000);
@@ -46,11 +62,33 @@ export default async function AnalyticsPage({
   const { data: tickets } = await supabase
     .from("tickets")
     .select(
-      "created_at, status, priority, sentiment, channel, tags, ai_resolved, first_response_at, resolved_at, csat_rating"
+      "id, subject, created_at, status, priority, sentiment, channel, tags, ai_resolved, first_response_at, resolved_at, csat_rating, decision_path, decision_reason, decision_confidence"
     )
     .gte("created_at", since.toISOString());
 
   const rows = tickets ?? [];
+
+  // AI quality signals — surfaced for a human to review, never acted on automatically.
+  const aiTouched = rows.filter((t) => t.decision_path !== null);
+  const lowCsatAi = aiTouched.filter(
+    (t) => t.csat_rating !== null && t.csat_rating <= 2
+  );
+  const lowCsatByPath = countByPath(lowCsatAi);
+
+  const aiResolvedRated = rows.filter((t) => t.ai_resolved && t.csat_rating !== null);
+  const humanResolvedRated = rows.filter(
+    (t) => t.resolved_at && !t.ai_resolved && t.csat_rating !== null
+  );
+  const avgOf = (list: typeof rows) =>
+    list.length > 0
+      ? list.reduce((sum, t) => sum + (t.csat_rating ?? 0), 0) / list.length
+      : null;
+  const aiCsatAvg = avgOf(aiResolvedRated);
+  const humanCsatAvg = avgOf(humanResolvedRated);
+
+  const recentLowCsat = [...lowCsatAi]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 6);
 
   // Daily volume
   const days: { label: string; total: number; aiResolved: number }[] = [];
@@ -313,6 +351,100 @@ export default async function AnalyticsPage({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <AlertTriangle className="size-4 text-amber-400" /> AI quality signals
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Surfaced for review — nothing here changes AI behavior
+            automatically.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div>
+              <p className="text-xs text-muted-foreground">AI-resolved CSAT</p>
+              <p className="text-xl font-semibold">
+                {aiCsatAvg != null ? `${aiCsatAvg.toFixed(1)}/5` : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Human-resolved CSAT</p>
+              <p className="text-xl font-semibold">
+                {humanCsatAvg != null ? `${humanCsatAvg.toFixed(1)}/5` : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Low-CSAT AI tickets</p>
+              <p className="text-xl font-semibold">{lowCsatAi.length}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">of {aiTouched.length} AI-touched</p>
+              <p className="text-xl font-semibold">
+                {aiTouched.length > 0
+                  ? `${Math.round((lowCsatAi.length / aiTouched.length) * 100)}%`
+                  : "—"}
+              </p>
+            </div>
+          </div>
+
+          {lowCsatByPath.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                Low-CSAT tickets by decision path
+              </p>
+              <Distribution
+                items={lowCsatByPath}
+                colors={{
+                  auto: "bg-emerald-400/70",
+                  cited: "bg-sky-400/70",
+                  escalated: "bg-amber-400/70",
+                }}
+              />
+            </div>
+          )}
+
+          {recentLowCsat.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Recent low-CSAT AI conversations
+              </p>
+              {recentLowCsat.map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/inbox?t=${t.id}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors hover:bg-accent/40"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">{t.subject}</p>
+                    {t.decision_reason && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {t.decision_reason}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] capitalize">
+                      {t.decision_path}
+                    </Badge>
+                    <span className="text-xs text-amber-400">
+                      ★ {t.csat_rating}/5
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {lowCsatAi.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No low-rated AI conversations in this period.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

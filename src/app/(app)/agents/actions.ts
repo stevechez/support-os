@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
+import { recordVersion } from "@/lib/versions/engine";
 import { AGENT_PRESETS } from "./presets";
 
 export type AgentFormState = { error?: string; id?: string };
@@ -46,6 +47,14 @@ export async function saveAgent(input: {
       .update(row)
       .eq("id", input.id);
     if (error) return { error: error.message };
+    await recordVersion(supabase, {
+      orgId: current.member.organization_id,
+      entityType: "agent_config",
+      entityId: input.id,
+      snapshot: row,
+      createdBy: current.member.id,
+      note: "Edited",
+    });
     revalidatePath("/agents");
     return { id: input.id };
   }
@@ -56,6 +65,14 @@ export async function saveAgent(input: {
     .select("id")
     .single();
   if (error) return { error: error.message };
+  await recordVersion(supabase, {
+    orgId: current.member.organization_id,
+    entityType: "agent_config",
+    entityId: data.id,
+    snapshot: row,
+    createdBy: current.member.id,
+    note: "Created",
+  });
   revalidatePath("/agents");
   return { id: data.id };
 }

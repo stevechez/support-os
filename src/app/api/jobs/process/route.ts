@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { runStaleSweep } from "@/lib/automations/sla";
 import { runDueJobs } from "@/lib/jobs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -8,6 +9,10 @@ export const maxDuration = 60;
 /**
  * Job processor. Invoked by pg_cron every minute (retry sweep) and
  * immediately after enqueue. Authenticated with JOBS_SECRET.
+ *
+ * Also piggybacks the SLA sweep on this same cadence — "ticket.stale"
+ * automations have no single triggering event, so they need to be
+ * polled rather than fired inline like ticket.created/message.created.
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.JOBS_SECRET;
@@ -24,6 +29,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await runDueJobs(admin, 5);
-  return NextResponse.json(result);
+  const [jobs, sla] = await Promise.all([
+    runDueJobs(admin, 5),
+    runStaleSweep(admin).catch((e) => {
+      console.error("[sla] sweep failed:", e instanceof Error ? e.message : e);
+      return { checked: 0, fired: 0 };
+    }),
+  ]);
+
+  return NextResponse.json({ jobs, sla });
 }

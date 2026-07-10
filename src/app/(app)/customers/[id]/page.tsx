@@ -16,6 +16,7 @@ import {
   NotesEditor,
   TagsEditor,
 } from "./customer-editor";
+import { OrdersPanel } from "./orders-panel";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { initials, timeAgo } from "@/lib/format";
@@ -35,11 +36,14 @@ export default async function CustomerPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("*, tickets(*)")
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data: customer }, { data: orders }] = await Promise.all([
+    supabase.from("customers").select("*, tickets(*)").eq("id", id).maybeSingle(),
+    supabase
+      .from("orders")
+      .select("*")
+      .eq("customer_id", id)
+      .order("ordered_at", { ascending: false }),
+  ]);
 
   if (!customer) notFound();
 
@@ -164,6 +168,8 @@ export default async function CustomerPage({
           )}
         </CardContent>
       </Card>
+
+      <OrdersPanel customerId={customer.id} orders={orders ?? []} />
 
       <NotesEditor customerId={customer.id} notes={customer.notes} />
     </div>

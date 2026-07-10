@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "debugId": "c503f7fa-9ea6-283d-d11d-1fe18ecfe090",
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["../../../sentry.server.config.ts"],"sourcesContent":["import * as Sentry from \"@sentry/nextjs\";\n\nSentry.init({\n  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,\n  tracesSampleRate: 0.1,\n  enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,\n});\n"],"names":["dsn","tracesSampleRate","enabled"],"mappings":"wCAAA,AAEA,EAFA,CAAA,CAAA,QAEA,IAAW,CAAC,CACVA,GAAG,CAAA,GACHC,iBAAkB,GAClBC,QAAS,CAAC,CACZ"}}]
+}

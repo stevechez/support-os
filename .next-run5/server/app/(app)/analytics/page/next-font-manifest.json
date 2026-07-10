@@ -1,0 +1,11 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/src/app/(app)/analytics/page": [
+      "static/media/manrope_latin_wght_normal-s.p.1p_a2k8qd5zhp.woff2",
+      "static/media/dm_serif_display_latin_400_normal-s.p.1djctenx_0un1.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}

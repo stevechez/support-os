@@ -47,6 +47,20 @@ export const TEMPLATES: Template[] = [
     ],
   },
   {
+    id: "stale-ticket-escalation",
+    name: "Escalate stale tickets",
+    description:
+      "If a ticket sits open with no new activity for 24 hours, escalate it and notify the team.",
+    trigger: { event: "ticket.stale", conditions: [], staleAfterHours: 24 },
+    steps: [
+      { type: "escalate" },
+      {
+        type: "slack_notify",
+        message: "⏰ Ticket has been inactive for 24h and needs attention.",
+      },
+    ],
+  },
+  {
     id: "password-reset",
     name: "Password reset auto-answer",
     description:

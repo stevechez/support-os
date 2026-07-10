@@ -1,0 +1,17 @@
+{
+  "node": {
+    "609b8e7e1df58461ef830f6456c6a2d6b937c399be": {
+      "workers": {
+        "app/rate/[token]/page": {
+          "moduleId": 326780,
+          "async": false,
+          "exportedName": "submitCsatComment",
+          "filename": "src/app/rate/[token]/actions.ts"
+        }
+      },
+      "exportedName": "submitCsatComment",
+      "filename": "src/app/rate/[token]/actions.ts"
+    }
+  },
+  "edge": {}
+}

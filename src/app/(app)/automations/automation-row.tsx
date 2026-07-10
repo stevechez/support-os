@@ -6,6 +6,7 @@ import { ArrowDown, Trash2, Zap, ZapOff } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { VersionHistoryButton } from "@/components/version-history-button";
 import {
   describeStep,
   describeTrigger,
@@ -73,6 +74,11 @@ export function AutomationRow({
       </Link>
 
       <div className="flex shrink-0 items-center gap-1">
+        <VersionHistoryButton
+          entityType="automation"
+          entityId={automation.id}
+          revalidatePath="/automations"
+        />
         <Button
           variant="ghost"
           size="icon"

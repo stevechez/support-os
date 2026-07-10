@@ -1,0 +1,17 @@
+{
+  "node": {
+    "605c71330fc28d9ea5f35b8bc6ee241e4aafda203e": {
+      "workers": {
+        "app/onboarding/page": {
+          "moduleId": 984373,
+          "async": false,
+          "exportedName": "createWorkspace",
+          "filename": "src/app/onboarding/actions.ts"
+        }
+      },
+      "exportedName": "createWorkspace",
+      "filename": "src/app/onboarding/actions.ts"
+    }
+  },
+  "edge": {}
+}

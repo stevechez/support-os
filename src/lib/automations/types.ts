@@ -1,6 +1,6 @@
 import type { TicketPriority, TicketStatus } from "@/lib/database.types";
 
-export type TriggerEvent = "ticket.created" | "message.created";
+export type TriggerEvent = "ticket.created" | "message.created" | "ticket.stale";
 
 export type ConditionField =
   | "subject_contains"
@@ -13,26 +13,35 @@ export type Condition = { field: ConditionField; value: string };
 export type Trigger = {
   event: TriggerEvent;
   conditions: Condition[];
+  /** Only used by the "ticket.stale" event — hours of inactivity before it fires. */
+  staleAfterHours?: number;
 };
 
 export type Step =
   | { type: "ai_classify" }
-  | { type: "ai_draft_reply"; agentId?: string }
-  | { type: "ai_auto_reply"; resolve?: boolean; agentId?: string }
+  | { type: "ai_draft_reply"; agentId?: string; experimentId?: string }
+  | { type: "ai_auto_reply"; resolve?: boolean; agentId?: string; experimentId?: string }
   | { type: "set_priority"; priority: TicketPriority }
   | { type: "set_status"; status: TicketStatus }
   | { type: "add_tag"; tag: string }
   | { type: "assign"; memberId: string }
   | { type: "notify"; message: string }
   | { type: "slack_notify"; message: string }
-  | { type: "escalate" };
+  | { type: "escalate" }
+  | { type: "create_appointment"; title: string; offsetHours?: number }
+  | { type: "create_lead" }
+  | { type: "send_sms"; message: string }
+  | { type: "update_customer"; tag?: string; note?: string };
 
 export type StepType = Step["type"];
 
 export const TRIGGER_EVENTS: { id: TriggerEvent; label: string }[] = [
   { id: "ticket.created", label: "Ticket created" },
   { id: "message.created", label: "Customer message received" },
+  { id: "ticket.stale", label: "Ticket inactive for…" },
 ];
+
+export const DEFAULT_STALE_HOURS = 24;
 
 export const CONDITION_FIELDS: { id: ConditionField; label: string }[] = [
   { id: "subject_contains", label: "Subject contains" },
@@ -107,6 +116,30 @@ export const STEP_TYPES: {
     description: "Set urgent priority and flag the ticket",
     needsAi: false,
   },
+  {
+    id: "create_appointment",
+    label: "Schedule appointment",
+    description: "Creates an appointment record for the customer",
+    needsAi: false,
+  },
+  {
+    id: "create_lead",
+    label: "Create CRM lead",
+    description: "Creates a lead record from this conversation",
+    needsAi: false,
+  },
+  {
+    id: "send_sms",
+    label: "Send SMS",
+    description: "Logs an SMS to the customer (simulated until a provider is connected)",
+    needsAi: false,
+  },
+  {
+    id: "update_customer",
+    label: "Update customer record",
+    description: "Adds a tag and/or note to the customer profile",
+    needsAi: false,
+  },
 ];
 
 export function defaultStep(type: StepType): Step {
@@ -124,6 +157,12 @@ export function defaultStep(type: StepType): Step {
       return { type, message: "" };
     case "ai_auto_reply":
       return { type, resolve: false };
+    case "create_appointment":
+      return { type, title: "Follow-up call", offsetHours: 24 };
+    case "send_sms":
+      return { type, message: "" };
+    case "update_customer":
+      return { type, tag: "", note: "" };
     default:
       return { type } as Step;
   }
@@ -131,8 +170,10 @@ export function defaultStep(type: StepType): Step {
 
 export function describeTrigger(trigger: Trigger): string {
   const event =
-    TRIGGER_EVENTS.find((e) => e.id === trigger.event)?.label ??
-    trigger.event;
+    trigger.event === "ticket.stale"
+      ? `Ticket inactive for ${trigger.staleAfterHours ?? DEFAULT_STALE_HOURS}h`
+      : (TRIGGER_EVENTS.find((e) => e.id === trigger.event)?.label ??
+        trigger.event);
   if (trigger.conditions.length === 0) return event;
   const conds = trigger.conditions
     .map((c) => {
@@ -166,5 +207,13 @@ export function describeStep(step: Step): string {
       return "Send to Slack";
     case "escalate":
       return "Escalate";
+    case "create_appointment":
+      return `Schedule "${step.title || "…"}"`;
+    case "create_lead":
+      return "Create CRM lead";
+    case "send_sms":
+      return "Send SMS";
+    case "update_customer":
+      return "Update customer record";
   }
 }

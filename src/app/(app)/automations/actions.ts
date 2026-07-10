@@ -7,6 +7,7 @@ import type { Step, Trigger } from "@/lib/automations/types";
 import type { Json } from "@/lib/database.types";
 import { requireMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
+import { recordVersion } from "@/lib/versions/engine";
 import { TEMPLATES } from "./templates";
 
 export type SaveResult = { error?: string; id?: string };
@@ -41,6 +42,14 @@ export async function saveAutomation(input: {
       .update(row)
       .eq("id", input.id);
     if (error) return { error: error.message };
+    await recordVersion(supabase, {
+      orgId: current.member.organization_id,
+      entityType: "automation",
+      entityId: input.id,
+      snapshot: row,
+      createdBy: current.member.id,
+      note: "Edited",
+    });
     revalidatePath("/automations");
     return { id: input.id };
   }
@@ -51,6 +60,14 @@ export async function saveAutomation(input: {
     .select("id")
     .single();
   if (error) return { error: error.message };
+  await recordVersion(supabase, {
+    orgId: current.member.organization_id,
+    entityType: "automation",
+    entityId: data.id,
+    snapshot: row,
+    createdBy: current.member.id,
+    note: "Created",
+  });
   revalidatePath("/automations");
   return { id: data.id };
 }

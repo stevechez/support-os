@@ -1,0 +1,185 @@
+{
+  "node": {
+    "0007d0767dd81e361dbdcafeea6b6aa278e5a0bce0": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "signOut",
+          "filename": "src/app/login/actions.ts"
+        }
+      },
+      "exportedName": "signOut",
+      "filename": "src/app/login/actions.ts"
+    },
+    "6050c2e3d03e99700df5ecd0be7dd6b90169894072": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "forgotPassword",
+          "filename": "src/app/login/actions.ts"
+        }
+      },
+      "exportedName": "forgotPassword",
+      "filename": "src/app/login/actions.ts"
+    },
+    "60616f3b67af3afbc0f992fb970e9414c57aa52c41": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "updatePassword",
+          "filename": "src/app/login/actions.ts"
+        }
+      },
+      "exportedName": "updatePassword",
+      "filename": "src/app/login/actions.ts"
+    },
+    "6093aadcb8695449214fb752473582e29b531c2551": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "signup",
+          "filename": "src/app/login/actions.ts"
+        }
+      },
+      "exportedName": "signup",
+      "filename": "src/app/login/actions.ts"
+    },
+    "60e598dab30c015049866da1773d453076bf33ad3d": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "login",
+          "filename": "src/app/login/actions.ts"
+        }
+      },
+      "exportedName": "login",
+      "filename": "src/app/login/actions.ts"
+    },
+    "4010a99c1a4ef532e986133f28b3bb0fd243753a76": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "searchWorkspace",
+          "filename": "src/app/(app)/search-actions.ts"
+        }
+      },
+      "exportedName": "searchWorkspace",
+      "filename": "src/app/(app)/search-actions.ts"
+    },
+    "404969fff7535cfebc4a38bec0d18841cca97237fe": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "analyzeTicket",
+          "filename": "src/app/(app)/inbox/ai-actions.ts"
+        }
+      },
+      "exportedName": "analyzeTicket",
+      "filename": "src/app/(app)/inbox/ai-actions.ts"
+    },
+    "40165e5bcd427064fed8556694a5e872f1c3b01a17": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "escalateTicket",
+          "filename": "src/app/(app)/inbox/ai-actions.ts"
+        }
+      },
+      "exportedName": "escalateTicket",
+      "filename": "src/app/(app)/inbox/ai-actions.ts"
+    },
+    "605bff4ff50a2128d9d7fc58a4d0560f8908d2bedf": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "rewriteDraft",
+          "filename": "src/app/(app)/inbox/ai-actions.ts"
+        }
+      },
+      "exportedName": "rewriteDraft",
+      "filename": "src/app/(app)/inbox/ai-actions.ts"
+    },
+    "40ac9be3323adde58e13657d5d4011f064f1764c1e": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "setAiModel",
+          "filename": "src/app/(app)/inbox/ai-actions.ts"
+        }
+      },
+      "exportedName": "setAiModel",
+      "filename": "src/app/(app)/inbox/ai-actions.ts"
+    },
+    "60cd11ae7432093763896b051ad86c3125f6493272": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "translateDraft",
+          "filename": "src/app/(app)/inbox/ai-actions.ts"
+        }
+      },
+      "exportedName": "translateDraft",
+      "filename": "src/app/(app)/inbox/ai-actions.ts"
+    },
+    "4042f374c7ad67d2e77293b5defea35d4df7d41c1e": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "sendReply",
+          "filename": "src/app/(app)/tickets/actions.ts"
+        }
+      },
+      "exportedName": "sendReply",
+      "filename": "src/app/(app)/tickets/actions.ts"
+    },
+    "60fd59a588f71d7667762f4906a26fdda8ebcfb57d": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "assignTicket",
+          "filename": "src/app/(app)/tickets/actions.ts"
+        }
+      },
+      "exportedName": "assignTicket",
+      "filename": "src/app/(app)/tickets/actions.ts"
+    },
+    "60596f762a49e76e4abba15f616208135c36819419": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "updateTicketPriority",
+          "filename": "src/app/(app)/tickets/actions.ts"
+        }
+      },
+      "exportedName": "updateTicketPriority",
+      "filename": "src/app/(app)/tickets/actions.ts"
+    },
+    "607e380b4de4a528139b1c0527c39e39fea5314be5": {
+      "workers": {
+        "app/(app)/inbox/page": {
+          "moduleId": 579626,
+          "async": false,
+          "exportedName": "updateTicketStatus",
+          "filename": "src/app/(app)/tickets/actions.ts"
+        }
+      },
+      "exportedName": "updateTicketStatus",
+      "filename": "src/app/(app)/tickets/actions.ts"
+    }
+  },
+  "edge": {}
+}
