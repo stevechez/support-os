@@ -54,7 +54,23 @@ export async function signup(
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  // Without an explicit emailRedirectTo, Supabase falls back to the
+  // static "Site URL" configured in the dashboard — which silently sends
+  // people to whatever domain was set there (e.g. an old vercel.app URL)
+  // regardless of which domain they actually signed up on, and lands on
+  // "/" (raw ?code=..., never exchanged) instead of /auth/callback.
+  // Deriving it from the request instead makes confirmation follow
+  // whichever domain the user is actually on.
+  const headerList = await headers();
+  const origin =
+    headerList.get("origin") ??
+    `https://${headerList.get("host") ?? "localhost:3000"}`;
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: `${origin}/auth/callback?next=/dashboard` },
+  });
 
   if (error) return { error: friendlyAuthError(error.message) };
 
