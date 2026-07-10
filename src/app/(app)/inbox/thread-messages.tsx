@@ -112,6 +112,8 @@ export function ThreadMessages({
 
       <ReplyForm
         ticketId={ticketId}
+        customerName={customerName}
+        memberName={memberName}
         onOptimisticSend={(body, isInternal) =>
           addOptimistic({
             id: `optimistic-${Date.now()}`,

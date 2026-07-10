@@ -30,10 +30,7 @@ export function HelpCenter() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      setNotFound(true);
-      return;
-    }
+    if (!token) return;
     fetch(`/api/help?token=${encodeURIComponent(token)}`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then(setInit)
@@ -64,7 +61,7 @@ export function HelpCenter() {
     }
   }
 
-  if (notFound) {
+  if (!token || notFound) {
     return (
       <div className="flex h-dvh items-center justify-center p-6 text-center">
         <p className="text-muted-foreground">

@@ -805,6 +805,51 @@ export type Database = {
           },
         ]
       }
+      macros: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "macros_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "macros_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           avatar_url: string | null
@@ -1490,3 +1535,5 @@ export type ExperimentVariant = "a" | "b"
 export type ActionRequest = Tables<"action_requests">
 export type ActionType = "refund" | "cancel_order" | "update_shipping_address"
 export type ActionRequestStatus = "pending" | "approved" | "rejected" | "sent" | "failed"
+export type Macro = Tables<"macros">
+

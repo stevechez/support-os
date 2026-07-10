@@ -13,6 +13,7 @@ import {
   UsersRound,
   Wand2,
   Workflow,
+  Zap,
 } from "lucide-react";
 
 /** Primary, everyday workflow items — always visible, never collapsed. */
@@ -23,6 +24,7 @@ export const primaryNav = [
   { href: "/knowledge", label: "Knowledge Base", icon: BookOpen },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/tickets", label: "Tickets", icon: Ticket },
+  { href: "/macros", label: "Macros", icon: Zap },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
