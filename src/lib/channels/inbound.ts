@@ -58,7 +58,13 @@ export async function resolveInboundTicket(
 /** Find the org that owns a channel token (settings key + value.token). */
 export async function orgForToken(
   supabase: Client,
-  settingsKey: "chat_widget" | "inbound_email" | "order_sync",
+  settingsKey:
+    | "chat_widget"
+    | "inbound_email"
+    | "order_sync"
+    | "voice"
+    | "sms"
+    | "help_center",
   token: string
 ): Promise<string | null> {
   if (!token) return null;
@@ -98,6 +104,78 @@ export async function findOrCreateCustomer(
       organization_id: orgId,
       email: normalized,
       name: name?.trim() || normalized.split("@")[0],
+    })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return created.id;
+}
+
+/** Find-or-create a customer by phone number — voice has no email up front. */
+export async function findOrCreateCustomerByPhone(
+  supabase: Client,
+  orgId: string,
+  phone: string
+): Promise<string> {
+  const normalized = phone.trim();
+  const { data: existing } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("phone", normalized)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from("customers")
+    .insert({
+      organization_id: orgId,
+      phone: normalized,
+      name: normalized,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return created.id;
+}
+
+/**
+ * Thread an inbound SMS onto the customer's existing open/waiting SMS
+ * ticket, or start a new one — SMS has no client-side session to carry a
+ * ticket ID between messages, so threading has to be resolved server-side.
+ * Mirrors the voice channel's one-ticket-per-episode model: once a ticket
+ * resolves, the next text starts a fresh conversation rather than silently
+ * reopening old history.
+ */
+export async function resolveOrCreateSmsTicket(
+  supabase: Client,
+  orgId: string,
+  customerId: string
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from("tickets")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("customer_id", customerId)
+    .eq("channel", "sms")
+    .in("status", ["open", "waiting"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from("tickets")
+    .insert({
+      organization_id: orgId,
+      customer_id: customerId,
+      subject: "Text message conversation",
+      channel: "sms",
+      tags: ["sms"],
     })
     .select("id")
     .single();

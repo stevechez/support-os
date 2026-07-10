@@ -593,6 +593,24 @@ export default function Home() {
 							FAQ
 						</a>
 						<Link
+							href="/security"
+							className="transition-colors hover:text-foreground"
+						>
+							Security
+						</Link>
+						<Link
+							href="/terms"
+							className="transition-colors hover:text-foreground"
+						>
+							Terms
+						</Link>
+						<Link
+							href="/privacy"
+							className="transition-colors hover:text-foreground"
+						>
+							Privacy
+						</Link>
+						<Link
 							href="/login"
 							className="transition-colors hover:text-foreground"
 						>

@@ -58,7 +58,7 @@ export async function simulateReply(
     };
   }
 
-  const chunks = await retrieveKnowledge(ticket);
+  const chunks = await retrieveKnowledge(orgId, ticket);
   const orderContext = await retrieveOrderContext(supabase, orgId, {
     customerId: ticket.customer_id,
     conversationText: transcript(ticket),

@@ -79,8 +79,18 @@ export type RetrievedChunk = {
   similarity: number;
 };
 
-/** Retrieve knowledge chunks relevant to a ticket (empty if unavailable). */
+/**
+ * Retrieve knowledge chunks relevant to a ticket (empty if unavailable).
+ *
+ * Always scoped to `orgId` via a SECURITY DEFINER RPC rather than relying on
+ * RLS + an auth session — most callers here (email/chat/SMS/voice webhooks,
+ * background automations) run with no logged-in user, so a session-scoped
+ * query would silently return nothing. `orgId` must come from a trusted
+ * server-side value (the ticket's own organization_id), never from
+ * unauthenticated client input.
+ */
 export async function retrieveKnowledge(
+  orgId: string,
   ticket: { subject: string; messages: { sender: string; body: string }[] },
   count = 4
 ): Promise<RetrievedChunk[]> {
@@ -94,7 +104,8 @@ export async function retrieveKnowledge(
   try {
     const embedding = await embedQuery(query);
     const supabase = await createClient();
-    const { data } = await supabase.rpc("match_knowledge_chunks", {
+    const { data } = await supabase.rpc("match_knowledge_chunks_for_org", {
+      p_org_id: orgId,
       query_embedding: JSON.stringify(embedding),
       match_count: count,
       min_similarity: 0.25,

@@ -560,6 +560,24 @@ export function Builder({
                   />
                 </div>
               )}
+
+              {step.type === "request_action" && (
+                <NativeSelect
+                  value={step.action}
+                  onChange={(e) =>
+                    updateStep(i, {
+                      type: "request_action",
+                      action: e.target.value as typeof step.action,
+                    })
+                  }
+                >
+                  <option value="refund">Refund</option>
+                  <option value="cancel_order">Cancel order</option>
+                  <option value="update_shipping_address">
+                    Update shipping address
+                  </option>
+                </NativeSelect>
+              )}
             </CardContent>
           </Card>
         </div>

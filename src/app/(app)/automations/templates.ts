@@ -74,4 +74,23 @@ export const TEMPLATES: Template[] = [
       { type: "ai_auto_reply", resolve: true },
     ],
   },
+  {
+    id: "ai-requested-refund",
+    name: "AI-requested refund",
+    description:
+      "For refund requests tied to a real order, AI extracts the amount and reason and queues it in Actions for your approval — no autonomous refunds.",
+    trigger: {
+      event: "ticket.created",
+      conditions: [{ field: "subject_contains", value: "refund" }],
+    },
+    steps: [
+      { type: "ai_classify" },
+      { type: "add_tag", tag: "billing" },
+      { type: "request_action", action: "refund" },
+      {
+        type: "notify",
+        message: "Refund requested by AI — review it in Actions.",
+      },
+    ],
+  },
 ];

@@ -164,6 +164,19 @@ export async function deleteKnowledgeDocument(documentId: string) {
   revalidatePath("/knowledge");
 }
 
+export async function toggleCustomerVisible(documentId: string, visible: boolean) {
+  const gate = await requireMember("agent");
+  if (!gate.ok) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("knowledge_documents")
+    .update({ customer_visible: visible })
+    .eq("id", documentId);
+
+  revalidatePath("/knowledge");
+}
+
 export type SearchHit = {
   chunk_id: string;
   document_id: string;

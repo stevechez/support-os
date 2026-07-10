@@ -5,10 +5,11 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 
 import { referenceBlock, retrieveKnowledge, type RetrievedChunk } from "@/lib/ai/context";
-import { resolveModel } from "@/lib/ai/models";
-import { getOrgModel } from "@/lib/ai/org-model";
+import { withModelFailover } from "@/lib/ai/models";
+import { getOrgModelId } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
 import { sendTicketEmail } from "@/lib/channels/email-outbound";
+import { sendSms, smsOutboundConfigured } from "@/lib/channels/sms-outbound";
 import { sendCsatSurvey } from "@/lib/csat";
 import { updateCustomerMemory } from "@/lib/customers/memory";
 import type { Database } from "@/lib/database.types";
@@ -102,10 +103,7 @@ export async function generateReply(
     if (data?.enabled) agent = data;
   }
 
-  const resolved = agent?.model
-    ? resolveModel(agent.model)
-    : await getOrgModel(orgId);
-  if (!resolved) throw new Error("No AI provider configured");
+  const preferredId = agent?.model ?? (await getOrgModelId(orgId));
 
   const budget = await checkAiBudget(supabase, orgId);
   if (!budget.ok) throw new Error(budget.error);
@@ -115,12 +113,14 @@ export async function generateReply(
     ? `${base}\n\nGround factual claims (policies, procedures, timelines) in these knowledge base excerpts and do not contradict them:\n\n${groundingBlock}`
     : base;
 
-  const { text } = await generateText({
-    model: resolved.model,
-    system,
-    temperature: agent ? Number(agent.temperature) : undefined,
-    prompt: transcript(ticket),
-  });
+  const { text } = await withModelFailover(preferredId, (model) =>
+    generateText({
+      model,
+      system,
+      temperature: agent ? Number(agent.temperature) : undefined,
+      prompt: transcript(ticket),
+    })
+  );
   return text;
 }
 
@@ -214,18 +214,19 @@ async function executeStep(
 ): Promise<string> {
   switch (step.type) {
     case "ai_classify": {
-      const resolved = await getOrgModel(orgId);
-      if (!resolved) throw new Error("No AI provider configured");
+      const preferredId = await getOrgModelId(orgId);
 
       const budget = await checkAiBudget(supabase, orgId);
       if (!budget.ok) throw new Error(budget.error);
-      const { object } = await generateObject({
-        model: resolved.model,
-        schema: classifySchema,
-        system:
-          "Classify this support conversation: sentiment, intent (one or two lowercase words), priority, category tags.",
-        prompt: transcript(ticket),
-      });
+      const { object } = await withModelFailover(preferredId, (model) =>
+        generateObject({
+          model,
+          schema: classifySchema,
+          system:
+            "Classify this support conversation: sentiment, intent (one or two lowercase words), priority, category tags.",
+          prompt: transcript(ticket),
+        })
+      );
       await supabase
         .from("tickets")
         .update({
@@ -257,7 +258,7 @@ async function executeStep(
         return `blocked by rule: ${violation.rule.name}`;
       }
 
-      const chunks = await retrieveKnowledge(ticket);
+      const chunks = await retrieveKnowledge(orgId, ticket);
       const orderContext = await retrieveOrderContext(supabase, orgId, {
         customerId: ticket.customer_id,
         conversationText: transcript(ticket),
@@ -313,7 +314,7 @@ async function executeStep(
         return `blocked by rule: ${ticketViolation.rule.name}`;
       }
 
-      const chunks = await retrieveKnowledge(ticket);
+      const chunks = await retrieveKnowledge(orgId, ticket);
       const orderContext = await retrieveOrderContext(supabase, orgId, {
         customerId: ticket.customer_id,
         conversationText: transcript(ticket),
@@ -537,13 +538,27 @@ async function executeStep(
 
       if (!customer?.phone) return "skipped SMS (no phone on file)";
 
+      const smsBody = step.message || "Update on your support ticket.";
+      let status: "simulated" | "sent" | "failed" = "simulated";
+      let outcome = "SMS logged (simulated — Twilio not configured)";
+
+      if (smsOutboundConfigured()) {
+        const result = await sendSms(supabase, orgId, {
+          to: customer.phone,
+          body: smsBody,
+        });
+        status = result.ok ? "sent" : "failed";
+        outcome = result.ok ? "SMS sent" : `SMS failed: ${result.error}`;
+      }
+
       await supabase.from("sms_messages").insert({
         organization_id: orgId,
         ticket_id: ticket.id,
         to_phone: customer.phone,
-        body: step.message || "Update on your support ticket.",
+        body: smsBody,
+        status,
       });
-      return "SMS logged (simulated)";
+      return outcome;
     }
 
     case "update_customer": {
@@ -572,6 +587,91 @@ async function executeStep(
         .update({ tags: nextTags, notes: nextNotes })
         .eq("id", ticket.customer_id);
       return "customer record updated";
+    }
+
+    case "request_action": {
+      // Never fabricate an order to act on — an action request must be
+      // grounded in a real order on file for this customer.
+      const orderContext = await retrieveOrderContext(supabase, orgId, {
+        customerId: ticket.customer_id,
+        conversationText: transcript(ticket),
+      });
+      const order = orderContext.matchedOrder;
+      if (!order) {
+        return "skipped action request (no matched order to ground it in)";
+      }
+
+      const preferredId = await getOrgModelId(orgId);
+
+      const budget = await checkAiBudget(supabase, orgId);
+      if (!budget.ok) return `skipped action request (${budget.error})`;
+
+      const orderSummary = `Order on file: #${order.order_number}, status ${order.status}, total $${order.total ?? "unknown"}.`;
+      const extractSystem =
+        "You extract structured parameters for a customer service action request from a support conversation. Only use information explicitly present in the conversation — never invent amounts, reasons, or addresses. If something isn't stated, use an empty string or zero.";
+
+      let params: Record<string, string | number>;
+      try {
+        if (step.action === "refund") {
+          const { object } = await withModelFailover(preferredId, (model) =>
+            generateObject({
+              model,
+              schema: z.object({
+                amount: z.number().min(0),
+                reason: z.string(),
+              }),
+              system: `${extractSystem} Extract the refund amount (must not exceed the order total) and the reason.`,
+              prompt: `${transcript(ticket)}\n\n${orderSummary}`,
+            })
+          );
+          params = {
+            amount: Math.min(object.amount, Number(order.total ?? object.amount)),
+            reason: object.reason,
+          };
+        } else if (step.action === "cancel_order") {
+          const { object } = await withModelFailover(preferredId, (model) =>
+            generateObject({
+              model,
+              schema: z.object({ reason: z.string() }),
+              system: `${extractSystem} Extract the reason the customer wants to cancel this order.`,
+              prompt: `${transcript(ticket)}\n\n${orderSummary}`,
+            })
+          );
+          params = { reason: object.reason };
+        } else {
+          const { object } = await withModelFailover(preferredId, (model) =>
+            generateObject({
+              model,
+              schema: z.object({ new_address: z.string() }),
+              system: `${extractSystem} Extract the new shipping address the customer provided.`,
+              prompt: `${transcript(ticket)}\n\n${orderSummary}`,
+            })
+          );
+          params = { new_address: object.new_address };
+        }
+      } catch (e) {
+        return `skipped action request (extraction failed: ${e instanceof Error ? e.message : "unknown error"})`;
+      }
+
+      const { error } = await supabase.from("action_requests").insert({
+        organization_id: orgId,
+        ticket_id: ticket.id,
+        order_id: order.id,
+        action_type: step.action,
+        params,
+        reasoning: `Requested while handling "${ticket.subject}" — order #${order.order_number}.`,
+      });
+      if (error) return `failed to create action request: ${error.message}`;
+
+      await supabase.from("messages").insert({
+        organization_id: orgId,
+        ticket_id: ticket.id,
+        sender: "system",
+        body: `AI requested action: ${step.action.replace("_", " ")} for order #${order.order_number} — pending approval in Actions.`,
+        is_internal: true,
+      });
+
+      return `action requested: ${step.action} (pending approval)`;
     }
   }
 }

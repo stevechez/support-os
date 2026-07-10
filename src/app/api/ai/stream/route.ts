@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       system = CHECKLIST_SYSTEM;
       break;
     case "suggest_reply": {
-      const chunks = await retrieveKnowledge(ctx.ticket);
+      const chunks = await retrieveKnowledge(orgId, ctx.ticket);
       system =
         SUGGEST_REPLY_SYSTEM +
         (chunks.length > 0
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
           { status: 503 }
         );
       }
-      const chunks = await retrieveKnowledge(ctx.ticket, 5);
+      const chunks = await retrieveKnowledge(orgId, ctx.ticket, 5);
       if (chunks.length === 0) {
         return new Response(
           "No relevant documentation found in the knowledge base. Try indexing more documents on the Knowledge Base page.",

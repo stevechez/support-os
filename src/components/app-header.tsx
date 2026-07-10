@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { HeaderSearch } from "@/components/header-search";
 import { MobileNav } from "@/components/mobile-nav";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function AppHeader({ email }: { email: string }) {
   const initials = email.slice(0, 2).toUpperCase();
@@ -15,6 +16,7 @@ export function AppHeader({ email }: { email: string }) {
       <HeaderSearch />
 
       <div className="flex items-center gap-2">
+        <NotificationBell />
         <Avatar className="size-8">
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>

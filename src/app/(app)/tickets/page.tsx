@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
-import type { TicketStatus } from "@/lib/database.types";
+import type { Sentiment, TicketPriority, TicketStatus } from "@/lib/database.types";
 import { STATUSES, priorityStyles, statusStyles } from "@/lib/ticket-ui";
 import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -14,18 +14,27 @@ import { NewTicketButton } from "./new-ticket-button";
 
 export const metadata: Metadata = { title: "Tickets" };
 
+const PRIORITIES: TicketPriority[] = ["low", "medium", "high", "urgent"];
+const SENTIMENTS: Sentiment[] = ["positive", "neutral", "negative"];
+
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; priority?: string; sentiment?: string }>;
 }) {
   const current = await getCurrentMember();
   if (!current) redirect("/onboarding");
 
   const supabase = await createClient();
-  const { status } = await searchParams;
+  const { status, priority, sentiment } = await searchParams;
   const filter = STATUSES.includes(status as TicketStatus)
     ? (status as TicketStatus)
+    : undefined;
+  const priorityFilter = PRIORITIES.includes(priority as TicketPriority)
+    ? (priority as TicketPriority)
+    : undefined;
+  const sentimentFilter = SENTIMENTS.includes(sentiment as Sentiment)
+    ? (sentiment as Sentiment)
     : undefined;
 
   let query = supabase
@@ -34,8 +43,16 @@ export default async function TicketsPage({
     .order("created_at", { ascending: false });
 
   if (filter) query = query.eq("status", filter);
+  if (priorityFilter) query = query.eq("priority", priorityFilter);
+  if (sentimentFilter) query = query.eq("sentiment", sentimentFilter);
 
   const { data: tickets } = await query;
+
+  const activeFilters = [
+    filter,
+    priorityFilter ? `${priorityFilter} priority` : null,
+    sentimentFilter ? `${sentimentFilter} sentiment` : null,
+  ].filter(Boolean);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-8">
@@ -69,6 +86,13 @@ export default async function TicketsPage({
             <Link href={`/tickets?status=${s}`}>{s}</Link>
           </Button>
         ))}
+        {(priorityFilter || sentimentFilter) && (
+          <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+            <Link href={filter ? `/tickets?status=${filter}` : "/tickets"}>
+              Clear {activeFilters.filter((f) => f !== filter).join(", ")} filter
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-xl border">
@@ -133,7 +157,10 @@ export default async function TicketsPage({
                   colSpan={6}
                   className="px-4 py-12 text-center text-muted-foreground"
                 >
-                  No tickets{filter ? ` with status “${filter}”` : ""}.
+                  No tickets
+                  {activeFilters.length > 0
+                    ? ` matching ${activeFilters.map((f) => `“${f}”`).join(", ")}.`
+                    : "."}
                 </td>
               </tr>
             )}

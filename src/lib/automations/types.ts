@@ -31,7 +31,11 @@ export type Step =
   | { type: "create_appointment"; title: string; offsetHours?: number }
   | { type: "create_lead" }
   | { type: "send_sms"; message: string }
-  | { type: "update_customer"; tag?: string; note?: string };
+  | { type: "update_customer"; tag?: string; note?: string }
+  | {
+      type: "request_action";
+      action: "refund" | "cancel_order" | "update_shipping_address";
+    };
 
 export type StepType = Step["type"];
 
@@ -140,6 +144,13 @@ export const STEP_TYPES: {
     description: "Adds a tag and/or note to the customer profile",
     needsAi: false,
   },
+  {
+    id: "request_action",
+    label: "AI: request account action",
+    description:
+      "Refund, cancel order, or update shipping — extracted from the conversation, grounded in a real matched order, always held for human approval",
+    needsAi: true,
+  },
 ];
 
 export function defaultStep(type: StepType): Step {
@@ -163,6 +174,8 @@ export function defaultStep(type: StepType): Step {
       return { type, message: "" };
     case "update_customer":
       return { type, tag: "", note: "" };
+    case "request_action":
+      return { type, action: "refund" };
     default:
       return { type } as Step;
   }
@@ -215,5 +228,14 @@ export function describeStep(step: Step): string {
       return "Send SMS";
     case "update_customer":
       return "Update customer record";
+    case "request_action": {
+      const actionLabel =
+        step.action === "refund"
+          ? "Refund"
+          : step.action === "cancel_order"
+            ? "Cancel order"
+            : "Update shipping address";
+      return `Request action: ${actionLabel}`;
+    }
   }
 }

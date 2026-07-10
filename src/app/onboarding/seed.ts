@@ -222,4 +222,6 @@ export async function seedDemoData(
   ];
 
   await supabase.from("messages").insert(messages);
+
+  return insertedTickets;
 }

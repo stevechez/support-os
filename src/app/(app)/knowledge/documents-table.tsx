@@ -8,9 +8,41 @@ import { Button } from "@/components/ui/button";
 import type { Tables } from "@/lib/database.types";
 import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { deleteKnowledgeDocument } from "./actions";
+import { deleteKnowledgeDocument, toggleCustomerVisible } from "./actions";
 
 type Doc = Tables<"knowledge_documents"> & { chunkCount: number };
+
+function VisibilityToggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      title={checked ? "Visible in the public help center" : "Not shown in the public help center"}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50",
+        checked ? "bg-emerald-500" : "bg-muted"
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 size-4 rounded-full bg-white transition-transform",
+          checked ? "translate-x-[18px]" : "translate-x-0.5"
+        )}
+      />
+    </button>
+  );
+}
 
 const statusStyles: Record<string, string> = {
   ready: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
@@ -47,6 +79,7 @@ export function DocumentsTable({ documents }: { documents: Doc[] }) {
             <th className="px-4 py-2.5 font-medium">Status</th>
             <th className="px-4 py-2.5 font-medium">Chunks</th>
             <th className="px-4 py-2.5 font-medium">Added</th>
+            <th className="px-4 py-2.5 font-medium">Help center</th>
             <th className="w-12 px-4 py-2.5" />
           </tr>
         </thead>
@@ -90,6 +123,17 @@ export function DocumentsTable({ documents }: { documents: Doc[] }) {
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {timeAgo(doc.created_at)}
+                </td>
+                <td className="px-4 py-3">
+                  <VisibilityToggle
+                    checked={doc.customer_visible}
+                    disabled={pending || doc.status !== "ready"}
+                    onChange={(visible) =>
+                      startTransition(() =>
+                        toggleCustomerVisible(doc.id, visible)
+                      )
+                    }
+                  />
                 </td>
                 <td className="px-4 py-3">
                   <Button

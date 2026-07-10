@@ -3,7 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateText } from "ai";
 
-import { getOrgModel } from "@/lib/ai/org-model";
+import { withModelFailover } from "@/lib/ai/models";
+import { getOrgModelId } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
 import type { Database } from "@/lib/database.types";
 
@@ -34,8 +35,7 @@ export async function updateCustomerMemory(
 
     if (!ticket?.customer_id || !ticket.customer) return;
 
-    const resolved = await getOrgModel(orgId);
-    if (!resolved) return;
+    const preferredId = await getOrgModelId(orgId);
 
     const budget = await checkAiBudget(supabase, orgId);
     if (!budget.ok) return;
@@ -57,11 +57,9 @@ export async function updateCustomerMemory(
       `\nJust resolved — "${ticket.subject}":\n${transcript}`,
     ].join("\n");
 
-    const { text } = await generateText({
-      model: resolved.model,
-      system: MEMORY_SYSTEM,
-      prompt,
-    });
+    const { text } = await withModelFailover(preferredId, (model) =>
+      generateText({ model, system: MEMORY_SYSTEM, prompt })
+    );
 
     await supabase
       .from("customers")

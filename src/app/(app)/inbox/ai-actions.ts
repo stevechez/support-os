@@ -5,7 +5,8 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 
 import { loadTicketContext } from "@/lib/ai/context";
-import { getOrgModel } from "@/lib/ai/org-model";
+import { failoverCandidates, withModelFailover } from "@/lib/ai/models";
+import { getOrgModelId } from "@/lib/ai/org-model";
 import { checkAiBudget } from "@/lib/billing/usage";
 import { PERMISSION_ERROR, requireMember, roleAtLeast } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
@@ -17,21 +18,23 @@ export type AiResult =
 const NO_MODEL_ERROR =
   "No AI provider configured. Add an API key (e.g. ANTHROPIC_API_KEY) to .env.local and restart the dev server.";
 
-/** Resolve the org's model and charge one AI action against the budget. */
+/** Resolve the org's preferred model id and charge one AI action against the budget. */
 async function gateAi(
   orgId: string
 ): Promise<
-  | { ok: true; model: NonNullable<Awaited<ReturnType<typeof getOrgModel>>> }
+  | { ok: true; preferredId: string | undefined }
   | { ok: false; error: string }
 > {
-  const resolved = await getOrgModel(orgId);
-  if (!resolved) return { ok: false, error: NO_MODEL_ERROR };
+  const preferredId = await getOrgModelId(orgId);
+  if (failoverCandidates(preferredId).length === 0) {
+    return { ok: false, error: NO_MODEL_ERROR };
+  }
 
   const supabase = await createClient();
   const budget = await checkAiBudget(supabase, orgId);
   if (!budget.ok) return { ok: false, error: budget.error };
 
-  return { ok: true, model: resolved };
+  return { ok: true, preferredId };
 }
 
 export async function setAiModel(modelId: string) {
@@ -72,13 +75,15 @@ export async function analyzeTicket(ticketId: string): Promise<AiResult> {
   if (!gate.ok) return { ok: false, error: gate.error };
 
   try {
-    const { object } = await generateObject({
-      model: gate.model.model,
-      schema: analysisSchema,
-      system:
-        "Analyze this customer support conversation. Classify the customer's sentiment, their intent, the appropriate priority, and applicable category tags.",
-      prompt: ctx.context,
-    });
+    const { object } = await withModelFailover(gate.preferredId, (model) =>
+      generateObject({
+        model,
+        schema: analysisSchema,
+        system:
+          "Analyze this customer support conversation. Classify the customer's sentiment, their intent, the appropriate priority, and applicable category tags.",
+        prompt: ctx.context,
+      })
+    );
 
     await ctx.supabase
       .from("tickets")
@@ -115,11 +120,13 @@ export async function rewriteDraft(
   if (!gate.ok) return { ok: false, error: gate.error };
 
   try {
-    const { text } = await generateText({
-      model: gate.model.model,
-      system: `Rewrite the given customer support reply in a ${tone} tone. Preserve all facts and commitments exactly. Output only the rewritten text.`,
-      prompt: draft,
-    });
+    const { text } = await withModelFailover(gate.preferredId, (model) =>
+      generateText({
+        model,
+        system: `Rewrite the given customer support reply in a ${tone} tone. Preserve all facts and commitments exactly. Output only the rewritten text.`,
+        prompt: draft,
+      })
+    );
     return { ok: true, text };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "AI error" };
@@ -139,11 +146,13 @@ export async function translateDraft(
   if (!gate.ok) return { ok: false, error: gate.error };
 
   try {
-    const { text } = await generateText({
-      model: gate.model.model,
-      system: `Translate the given customer support reply into ${language}. Keep the tone and meaning. Output only the translation.`,
-      prompt: draft,
-    });
+    const { text } = await withModelFailover(gate.preferredId, (model) =>
+      generateText({
+        model,
+        system: `Translate the given customer support reply into ${language}. Keep the tone and meaning. Output only the translation.`,
+        prompt: draft,
+      })
+    );
     return { ok: true, text };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "AI error" };

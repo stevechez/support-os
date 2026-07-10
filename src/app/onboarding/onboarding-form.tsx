@@ -40,7 +40,9 @@ export function OnboardingForm() {
           <CardHeader>
             <CardTitle>Workspace</CardTitle>
             <CardDescription>
-              Usually your company or team name.
+              Usually your company or team name. We&apos;ll pre-load standard
+              guardrail rules and starter automations so AI can start
+              resolving and escalating real conversations right away.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -63,7 +65,8 @@ export function OnboardingForm() {
                   defaultChecked
                   className="size-4 accent-primary"
                 />
-                Include sample customers and tickets
+                Include sample customers and tickets, and let AI resolve
+                them live so you can see it work
               </label>
 
               {state.error && (

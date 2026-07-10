@@ -1,8 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+
+import { runAutomations } from "@/lib/automations/engine";
 import { createClient } from "@/lib/supabase/server";
 import { seedDemoData } from "./seed";
+import { seedStarterConfig } from "./starter-config";
 
 export type OnboardingState = { error?: string };
 
@@ -40,6 +44,12 @@ export async function createWorkspace(
     return { error: orgError?.message ?? "Could not create workspace." };
   }
 
+  // Real product configuration, not demo fluff — every new workspace gets
+  // the standard guardrail rules and starter automations so AI can resolve
+  // or correctly escalate real conversations from the first message in,
+  // instead of landing in an inert, unconfigured inbox.
+  await seedStarterConfig(supabase, orgId);
+
   if (withDemo) {
     const { data: member } = await supabase
       .from("members")
@@ -49,7 +59,18 @@ export async function createWorkspace(
       .single();
 
     if (member) {
-      await seedDemoData(supabase, orgId, member.id);
+      const tickets = await seedDemoData(supabase, orgId, member.id);
+      // Run the newly-seeded automations against the sample tickets in the
+      // background, so by the time the user lands on the dashboard, AI has
+      // already auto-resolved the password reset and started drafting a
+      // reply to the refund request — a real result, not just a promise.
+      if (tickets?.length) {
+        after(async () => {
+          for (const ticket of tickets) {
+            await runAutomations(supabase, orgId, "ticket.created", ticket.id);
+          }
+        });
+      }
     }
   }
 

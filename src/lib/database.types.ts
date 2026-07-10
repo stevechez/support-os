@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_requests: {
+        Row: {
+          action_type: string
+          created_at: string
+          delivery_response: string | null
+          id: string
+          order_id: string | null
+          organization_id: string
+          params: Json
+          reasoning: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          ticket_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          delivery_response?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id: string
+          params?: Json
+          reasoning?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          ticket_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          delivery_response?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id?: string
+          params?: Json
+          reasoning?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_requests_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_log: {
         Row: {
           action: string
@@ -617,6 +691,7 @@ export type Database = {
       knowledge_documents: {
         Row: {
           created_at: string
+          customer_visible: boolean
           id: string
           organization_id: string
           source_type: string
@@ -629,6 +704,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_visible?: boolean
           id?: string
           organization_id: string
           source_type?: string
@@ -641,6 +717,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_visible?: boolean
           id?: string
           organization_id?: string
           source_type?: string
@@ -834,6 +911,8 @@ export type Database = {
           order_number: string
           ordered_at: string
           organization_id: string
+          proactive_alert_sent_at: string | null
+          proactive_reason: string | null
           status: string
           total: number | null
           tracking_number: string | null
@@ -848,6 +927,8 @@ export type Database = {
           order_number: string
           ordered_at?: string
           organization_id: string
+          proactive_alert_sent_at?: string | null
+          proactive_reason?: string | null
           status?: string
           total?: number | null
           tracking_number?: string | null
@@ -862,6 +943,8 @@ export type Database = {
           order_number?: string
           ordered_at?: string
           organization_id?: string
+          proactive_alert_sent_at?: string | null
+          proactive_reason?: string | null
           status?: string
           total?: number | null
           tracking_number?: string | null
@@ -1194,6 +1277,42 @@ export type Database = {
           similarity: number
         }[]
       }
+      match_knowledge_chunks_for_org: {
+        Args: {
+          match_count?: number
+          min_similarity?: number
+          p_org_id: string
+          query_embedding: string
+        }
+        Returns: {
+          chunk_id: string
+          chunk_index: number
+          content: string
+          document_id: string
+          document_title: string
+          similarity: number
+        }[]
+      }
+      match_knowledge_chunks_public: {
+        Args: {
+          match_count?: number
+          min_similarity?: number
+          p_org_id: string
+          query_embedding: string
+        }
+        Returns: {
+          chunk_id: string
+          chunk_index: number
+          content: string
+          document_id: string
+          document_title: string
+          similarity: number
+        }[]
+      }
+      list_customer_visible_documents: {
+        Args: { p_org_id: string }
+        Returns: { id: string; title: string; tags: string[] }[]
+      }
       rate_limit_gc: { Args: never; Returns: undefined }
       rate_limit_hit: {
         Args: { p_bucket: string; p_window_seconds: number }
@@ -1368,3 +1487,6 @@ export type EntityVersion = Tables<"entity_versions">
 export type VersionedEntityType = "business_rule" | "automation" | "agent_config"
 export type AgentExperiment = Tables<"agent_experiments">
 export type ExperimentVariant = "a" | "b"
+export type ActionRequest = Tables<"action_requests">
+export type ActionType = "refund" | "cancel_order" | "update_shipping_address"
+export type ActionRequestStatus = "pending" | "approved" | "rejected" | "sent" | "failed"

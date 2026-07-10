@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import { planFromBilling } from "@/lib/billing/plans";
 import { stripeConfigured } from "@/lib/billing/stripe";
 import { getAiUsageThisMonth, getBilling } from "@/lib/billing/usage";
+import { smsOutboundConfigured } from "@/lib/channels/sms-outbound";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { BillingSettings } from "./billing-settings";
 import { DataExportSettings } from "./export-settings";
+import { ImportSettings } from "./import-settings";
 import { IntegrationsSettings } from "./integrations-settings";
 import { SecuritySettings } from "./security-settings";
 import { WorkspaceSettings } from "./workspace-settings";
@@ -32,6 +34,10 @@ export default async function SettingsPage() {
     enabled?: boolean;
     token?: string;
   };
+  const helpCenter = (byKey["help_center"] ?? {}) as {
+    enabled?: boolean;
+    token?: string;
+  };
   const inboundEmail = (byKey["inbound_email"] ?? {}) as {
     enabled?: boolean;
     token?: string;
@@ -39,6 +45,20 @@ export default async function SettingsPage() {
   const orderSync = (byKey["order_sync"] ?? {}) as {
     enabled?: boolean;
     token?: string;
+  };
+  const proactiveSupport = (byKey["proactive_support"] ?? {}) as {
+    enabled?: boolean;
+  };
+  const voice = (byKey["voice"] ?? {}) as { enabled?: boolean; token?: string };
+  const sms = (byKey["sms"] ?? {}) as {
+    enabled?: boolean;
+    token?: string;
+    from_number?: string;
+  };
+  const actionWebhook = (byKey["action_webhook"] ?? {}) as {
+    enabled?: boolean;
+    url?: string;
+    secret?: string;
   };
   const slack = (byKey["slack"] ?? {}) as { webhook_url?: string };
   const emailOutbound = (byKey["email_outbound"] ?? {}) as {
@@ -100,13 +120,22 @@ export default async function SettingsPage() {
 
       <IntegrationsSettings
         chatWidget={chatWidget}
+        helpCenter={helpCenter}
         inboundEmail={inboundEmail}
         orderSync={orderSync}
+        proactiveSupport={proactiveSupport}
+        voice={voice}
+        sms={sms}
+        smsConfigured={smsOutboundConfigured()}
+        actionWebhookUrl={actionWebhook.url ?? ""}
+        actionWebhookSecret={actionWebhook.secret ?? ""}
         slackWebhookUrl={slack.webhook_url ?? ""}
         emailFromAddress={emailOutbound.from_address ?? ""}
         resendConfigured={!!process.env.RESEND_API_KEY}
         serviceRoleConfigured={!!process.env.SUPABASE_SERVICE_ROLE_KEY}
       />
+
+      <ImportSettings />
 
       <SecuritySettings factors={verifiedFactors} />
 

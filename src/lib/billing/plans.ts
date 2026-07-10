@@ -4,6 +4,7 @@ export type Plan = {
   id: PlanId;
   label: string;
   price: string;
+  priceUsd: number;
   maxMembers: number;
   maxAiActionsPerMonth: number;
   maxKnowledgeDocs: number;
@@ -14,6 +15,7 @@ export const PLANS: Record<PlanId, Plan> = {
     id: "free",
     label: "Free",
     price: "$0",
+    priceUsd: 0,
     maxMembers: 3,
     maxAiActionsPerMonth: 50,
     maxKnowledgeDocs: 20,
@@ -22,6 +24,7 @@ export const PLANS: Record<PlanId, Plan> = {
     id: "pro",
     label: "Pro",
     price: "$49/mo",
+    priceUsd: 49,
     maxMembers: Number.POSITIVE_INFINITY,
     maxAiActionsPerMonth: 2000,
     maxKnowledgeDocs: 500,

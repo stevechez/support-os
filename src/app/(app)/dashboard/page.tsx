@@ -16,9 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { planFromBilling } from "@/lib/billing/plans";
+import { getBilling } from "@/lib/billing/usage";
 import { getCurrentMember } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { timeAgo } from "@/lib/format";
+import { GettingStarted } from "./getting-started";
+import { ValueDelivered } from "./value-delivered";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -27,8 +31,12 @@ export default async function DashboardPage() {
   if (!current) redirect("/onboarding");
 
   const supabase = await createClient();
+  const orgId = current.member.organization_id;
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
+
+  const billing = await getBilling(supabase, orgId);
+  const plan = planFromBilling(billing);
 
   const [
     { count: todayCount },
@@ -128,6 +136,10 @@ export default async function DashboardPage() {
           A calm overview of your support operation.
         </p>
       </div>
+
+      <GettingStarted orgId={orgId} />
+
+      <ValueDelivered orgId={orgId} monthlyPriceUsd={plan.priceUsd} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map(({ label, value, icon: Icon }) => (

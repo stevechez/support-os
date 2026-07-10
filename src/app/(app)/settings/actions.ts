@@ -54,6 +54,81 @@ export async function regenerateOrderSyncToken() {
   });
 }
 
+export async function toggleProactiveSupport(enabled: boolean) {
+  await upsertSetting("proactive_support", { enabled });
+}
+
+export async function toggleVoice(enabled: boolean, existingToken?: string) {
+  const token = existingToken || randomBytes(18).toString("base64url");
+  await upsertSetting("voice", { enabled, token });
+}
+
+export async function regenerateVoiceToken() {
+  await upsertSetting("voice", {
+    enabled: true,
+    token: randomBytes(18).toString("base64url"),
+  });
+}
+
+export async function toggleSms(
+  enabled: boolean,
+  existingToken?: string,
+  fromNumber?: string
+) {
+  const token = existingToken || randomBytes(18).toString("base64url");
+  await upsertSetting("sms", { enabled, token, from_number: fromNumber ?? "" });
+}
+
+export async function saveSmsFromNumber(fromNumber: string, existingToken?: string) {
+  const token = existingToken || randomBytes(18).toString("base64url");
+  await upsertSetting("sms", { enabled: true, token, from_number: fromNumber.trim() });
+}
+
+export async function regenerateSmsToken(fromNumber?: string) {
+  await upsertSetting("sms", {
+    enabled: true,
+    token: randomBytes(18).toString("base64url"),
+    from_number: fromNumber ?? "",
+  });
+}
+
+export async function toggleHelpCenter(enabled: boolean, existingToken?: string) {
+  const token = existingToken || randomBytes(18).toString("base64url");
+  await upsertSetting("help_center", { enabled, token });
+}
+
+export async function regenerateHelpCenterToken() {
+  await upsertSetting("help_center", {
+    enabled: true,
+    token: randomBytes(18).toString("base64url"),
+  });
+}
+
+export type ActionWebhookFormState = { error?: string; success?: string };
+
+export async function saveActionWebhook(
+  _prev: ActionWebhookFormState,
+  formData: FormData
+): Promise<ActionWebhookFormState> {
+  const url = (formData.get("url") as string)?.trim();
+  const secret = (formData.get("secret") as string)?.trim();
+
+  if (url && !/^https:\/\//.test(url)) {
+    return { error: "Webhook URL must start with https://" };
+  }
+
+  try {
+    await upsertSetting("action_webhook", { enabled: !!url, url, secret });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not save" };
+  }
+  return { success: url ? "Fulfillment webhook saved." : "Fulfillment webhook cleared." };
+}
+
+export async function toggleActionWebhook(enabled: boolean, url?: string, secret?: string) {
+  await upsertSetting("action_webhook", { enabled, url: url ?? "", secret: secret ?? "" });
+}
+
 export async function saveEmailFrom(
   _prev: { error?: string; success?: string },
   formData: FormData
